@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace MT3
+namespace AFPv2
 {
     public class Settings
     {
@@ -15,13 +15,7 @@ namespace MT3
             set { _text = value; }
         }
 
-        private int _id;
-        public int ID
-        {
-            get { return _id; }
-            set { _id = value; }
-        }
-
+        public int ID { get; set; }
         public int MtMon_ID { get; set; }
 
         private string _camera_type;
@@ -288,7 +282,7 @@ namespace MT3
         public Settings()
         {
             _text   = "IDS UI-2410SE-M";
-            _id     = 4;          //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
+            ID      = 4;          //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
             _camera_type = "IDS"; //カメラタイプ： IDS Basler AVT IS analog
             _camera_id = 2;       //カメラタイプ毎のID
             _camera_color = Camera_Color.mono;    // 0:mono(mono8)  1:color 2:mono12packed
@@ -323,7 +317,7 @@ namespace MT3
             _udp_port_kv1000 = 8503;
             _ip_mtmon = "192.168.1.211";
             _udp_port_mtmon = 24415;
-            _no_cap_dev = _id;
+            _no_cap_dev = ID;
             _save_dir = @"C:\Users\Public\img_data\";
             AviMaxFrame = 6000; //[fr] 640x480 -> 50sec 120fr/s
             PreSaveNum = 0;

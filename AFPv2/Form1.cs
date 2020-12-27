@@ -1,639 +1,1474 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using OpenCvSharp;
-using SpinnakerNET;
-using SpinnakerNET.GenApi;
+using OpenCvSharp.Blob;
+using VideoInputSharp;
+using System.Diagnostics;
+using System.Threading;
+using System.Net.Sockets;
+using System.Net;
 using System.Runtime.InteropServices;
+using System.IO;
+using PylonC.NETSupportLibrary;
+//using MtLibrary;
+using MtLibrary2;
 
-namespace AFPv2
+namespace MT3
 {
     public partial class Form1 : Form
     {
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        Star star = new Star();
+
         public Form1()
         {
             InitializeComponent();
+            timeBeginPeriod(time_period);
+
+            //コマンドライン引数を配列で取得する
+            cmds = System.Environment.GetCommandLineArgs();
+            //コマンドライン引数をcheck
+            if (cmds.Length != 3)
+            {
+                //アプリケーションを終了する
+                Application.Exit();
+            }
+            if (cmds[1].StartsWith("/vi") || cmds[1].StartsWith("/an"))  // analog camera VideoInputを使用
+            {
+                cam_maker = Camera_Maker.analog;
+                // cam_color = Camera_Color.mono;
+            }
+            if (cmds[1].StartsWith("/PG") || cmds[1].StartsWith("/Pg") || cmds[1].StartsWith("/pg") || cmds[1].StartsWith("/pgr")) // PointGreyReserch
+            {
+                cam_maker = Camera_Maker.PointGreyCamera;
+                PgrPrintBuildInfo();
+                logger.Info("PointGrayCamera start.");
+            }
+            if (cmds[1].StartsWith("/BA") || cmds[1].StartsWith("/ba") || cmds[1].StartsWith("/Ba")) // Basler
+            {
+                cam_maker = Camera_Maker.Basler;
+                // cam_color = Camera_Color.mono;
+                //updateDeviceListTimer.Enabled = true;
+            }
+            if (cmds[1].StartsWith("/AV") || cmds[1].StartsWith("/av")) // AVT
+            {
+                cam_maker = Camera_Maker.AVT;
+                // cam_color = Camera_Color.mono;
+            }
+            if (cmds[1].StartsWith("/ID") || cmds[1].StartsWith("/id")) // IDS
+            {
+                cam_maker = Camera_Maker.IDS;
+                // cam_color = Camera_Color.mono;
+                logger.Info("IDS camera start.");
+            }
+            if (cmds[1].StartsWith("/IS") || cmds[1].StartsWith("/Im")) // Imaging Souce
+            {
+                cam_maker = Camera_Maker.ImagingSouce;
+                // cam_color = Camera_Color.mono;
+            }
+
+            // setting load
+            appSettings = SettingsLoad(int.Parse(cmds[2]));
+
+            IplImageInit();
+
+            worker_udp = new BackgroundWorker();
+            worker_udp.WorkerReportsProgress = true;
+            worker_udp.WorkerSupportsCancellation = true;
+            worker_udp.DoWork += new DoWorkEventHandler(worker_udp_DoWork);
+            worker_udp.ProgressChanged += new ProgressChangedEventHandler(worker_udp_ProgressChanged);
+
+            xoa = xoa_mes;
+            yoa = yoa_mes;
+
+            // local ip address
+            mmLocalHost = Dns.GetHostName();
+            IPAddress[] addresses = Dns.GetHostAddresses(mmLocalHost);
+            foreach (IPAddress address in addresses)
+            {
+                mmLocalIP = address.ToString();
+            }
+
+            // VideoInput
+            if (cam_maker == Camera_Maker.analog)
+            {
+                worker = new BackgroundWorker();
+                worker.WorkerReportsProgress = true;
+                worker.WorkerSupportsCancellation = true;
+                worker.DoWork += new DoWorkEventHandler(worker_DoWork);
+                worker.ProgressChanged += new ProgressChangedEventHandler(worker_ProgressChanged);
+                worker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(worker_RunWorkerCompleted);
+
+                appTitle = "MT3 analog " + appSettings.ID.ToString();
+            }
+
+            // IDS
+            if (cam_maker == Camera_Maker.IDS)
+            {
+                u32DisplayID = pictureBox1.Handle.ToInt32();
+                //cam = new uEye.Camera();
+                appTitle = "MT3IDS " + appSettings.ID.ToString();
+            }
+
+            //AVT
+            if (cam_maker == Camera_Maker.AVT)
+            {
+                appTitle = "MT3AVT " + appSettings.ID.ToString();
+            }
+
+            //Basler
+            if (cam_maker == Camera_Maker.Basler)
+            {
+                appTitle = "MT3Basler " + appSettings.ID.ToString();
+                Text = "MT3BaslerAce";
+                /* Register for the events of the image provider needed for proper operation. */
+                m_imageProvider.GrabErrorEvent += new ImageProvider.GrabErrorEventHandler(OnGrabErrorEventCallback);
+                m_imageProvider.DeviceRemovedEvent += new ImageProvider.DeviceRemovedEventHandler(OnDeviceRemovedEventCallback);
+                m_imageProvider.DeviceOpenedEvent += new ImageProvider.DeviceOpenedEventHandler(OnDeviceOpenedEventCallback);
+                m_imageProvider.DeviceClosedEvent += new ImageProvider.DeviceClosedEventHandler(OnDeviceClosedEventCallback);
+                m_imageProvider.GrabbingStartedEvent += new ImageProvider.GrabbingStartedEventHandler(OnGrabbingStartedEventCallback);
+                m_imageProvider.ImageReadyEvent += new ImageProvider.ImageReadyEventHandler(OnImageReadyEventCallback);
+                m_imageProvider.GrabbingStoppedEvent += new ImageProvider.GrabbingStoppedEventHandler(OnGrabbingStoppedEventCallback);
+
+                /* Provide the controls in the lower left area with the image provider object. */
+                //     sliderExposureTime.MyImageProvider = m_imageProvider;
+
+                /*    sliderGain.MyImageProvider = m_imageProvider;
+                    sliderExposureTime.MyImageProvider = m_imageProvider;
+                    sliderHeight.MyImageProvider = m_imageProvider;
+                    sliderWidth.MyImageProvider = m_imageProvider;
+                    comboBoxTestImage.MyImageProvider = m_imageProvider;
+                    comboBoxPixelFormat.MyImageProvider = m_imageProvider;
+                */
+
+                /* Update the list of available devices in the upper left area. */
+                //UpdateDeviceList();
+            }
+            Pid_Data_Send_Init();
+            star.init(); // starデータ初期化
         }
 
-#if DEBUG
-        // Disables heartbeat on GEV cameras so debugging does not incur timeout errors
-        static int DisableHeartbeat(IManagedCamera cam, INodeMap nodeMap, INodeMap nodeMapTLDevice)
+        private void Form1_Load(object sender, EventArgs e)
         {
-            Console.WriteLine("Checking device type to see if we need to disable the camera's heartbeat...\n\n");
+            this.worker_udp.RunWorkerAsync();
 
-            //
-            // Write to boolean node controlling the camera's heartbeat
-            //
-            // *** NOTES ***
-            // This applies only to GEV cameras and only applies when in DEBUG mode.
-            // GEV cameras have a heartbeat built in, but when debugging applications the
-            // camera may time out due to its heartbeat. Disabling the heartbeat prevents
-            // this timeout from occurring, enabling us to continue with any necessary debugging.
-            // This procedure does not affect other types of cameras and will prematurely exit
-            // if it determines the device in question is not a GEV camera.
-            //
-            // *** LATER ***
-            // Since we only disable the heartbeat on GEV cameras during debug mode, it is better
-            // to power cycle the camera after debugging. A power cycle will reset the camera
-            // to its default settings.
-            //
-            IEnum iDeviceType = nodeMapTLDevice.GetNode<IEnum>("DeviceType");
-            IEnumEntry iDeviceTypeGEV = iDeviceType.GetEntryByName("GigEVision");
-            // We first need to confirm that we're working with a GEV camera
-            if (iDeviceType != null && iDeviceType.IsReadable)
+            appTitle = "MT3" + appSettings.Text + " " + appSettings.ID.ToString() + "  " + mmLocalHost + "(" + mmLocalIP + ")";
+            this.Text = appTitle;
+
+            // 有効な画像取り込みデバイスが選択されているかをチェック。
+            /*  if (!icImagingControl1.DeviceValid)
+              {
+                  icImagingControl1.ShowDeviceSettingsDialog();
+
+                  if (!icImagingControl1.DeviceValid)
+                  {
+                      MessageBox.Show("No device was selected.", "Display Buffer",
+                                      MessageBoxButtons.OK, MessageBoxIcon.Information);
+                      this.Close();
+                      return;
+                  }
+              } */
+
+        }
+        //Form起動後１回だけ発生
+        private void Form1_Shown(object sender, EventArgs e)
+        {
+            checkBoxObsAuto_CheckedChanged(sender, e);
+            diskspace = cDrive.TotalFreeSpace;
+            timerMTmonSend.Start();
+
+            starttime = Planet.ObsStartTime(DateTime.Now) - DateTime.Today;
+            endtime = Planet.ObsEndTime(DateTime.Now) - DateTime.Today;
+            string s = string.Format("ObsStart:{0},   ObsEnd:{1}\n", starttime, endtime);
+            richTextBox1.AppendText(s);
+            logger.Info(s);
+            timer_thingspeak_Tick( sender, e);
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            //UDP停止
+            if (worker_udp.IsBusy)
             {
-                if (iDeviceType.Value == iDeviceTypeGEV.Value)
+                worker_udp.CancelAsync();
+            }
+            // IDS
+            if (cam_maker == Camera_Maker.IDS)
+            {
+                //cam.Exit();
+            }
+            //AVT
+            if (cam_maker == Camera_Maker.AVT)
+            {
+                avt_cam_end();
+            }
+            //Basler
+            if (cam_maker == Camera_Maker.Basler)
+            {
+                BaslerEnd();
+            }
+
+            timeEndPeriod(16);
+        }
+
+        #region UDP
+        //
+        // 別スレッド処理（UDP） //IP 192.168.1.214
+        //
+        private void worker_udp_DoWork(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker bw = (BackgroundWorker)sender;
+
+            //バインドするローカルポート番号
+            int localPort = appSettings.UdpPortRecieve;// mmFsiUdpPortSpCam;// 24410 broadcast
+            System.Net.Sockets.UdpClient udpc = null; ;
+            try
+            {
+                udpc = new System.Net.Sockets.UdpClient(localPort);
+            }
+            catch (Exception ex)
+            {
+                //匿名デリゲートで表示する
+                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                logger.Error(ex.ToString());
+            }
+
+            // ベースブロードバンドポートなら転送
+            System.Net.Sockets.UdpClient udpc2 = null; ;
+            if (localPort == mmUdpPortBroadCast)
+            {
+                int localPortSent = mmUdpPortBroadCastSent;
+                try
                 {
-                    Console.WriteLine(
-                        "Working with a GigE camera. Attempting to disable heartbeat before continuing...\n\n");
-                    IBool iGEVHeartbeatDisable = nodeMap.GetNode<IBool>("GevGVCPHeartbeatDisable");
-                    if (iGEVHeartbeatDisable == null || !iGEVHeartbeatDisable.IsWritable)
+                    udpc2 = new System.Net.Sockets.UdpClient(localPortSent);
+                }
+                catch (Exception ex)
+                {
+                    //匿名デリゲートで表示する
+                    this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                }
+            }
+
+            //文字コードを指定する
+            System.Text.Encoding enc = System.Text.Encoding.UTF8;
+
+            string str;
+            MOTOR_DATA_KV_SP kmd3 = new MOTOR_DATA_KV_SP();
+            int size = Marshal.SizeOf(kmd3);
+            KV_DATA kd = new KV_DATA();
+            int sizekd = Marshal.SizeOf(kd);
+
+            //データを受信する
+            System.Net.IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, localPort);
+            while (bw.CancellationPending == false)
+            {
+                byte[] rcvBytes = udpc.Receive(ref remoteEP);
+                if (rcvBytes.Length == sizekd)
+                {
+                    kd = ToStruct1(rcvBytes);
+                    bw.ReportProgress(0, kd);
+
+                    // ベースブロードバンドポートなら転送
+                    if (localPort == mmUdpPortBroadCast)
                     {
-                        Console.WriteLine(
-                            "Unable to disable heartbeat on camera. Continuing with execution as this may be non-fatal...");
+                        //データを送信するリモートホストとポート番号
+                        string remoteHost = "localhost";
+                        //string remoteHost = "192.168.1.204";
+                        int remotePort = 24441;  // アプリ1
+                        udpc2.Send(rcvBytes, rcvBytes.Length, remoteHost, remotePort);
+
+                        remotePort = 24442;  // アプリ2
+                        udpc2.Send(rcvBytes, rcvBytes.Length, remoteHost, remotePort);
+
+                        remotePort = 24443;  // アプリ3
+                        udpc2.Send(rcvBytes, rcvBytes.Length, remoteHost, remotePort);
                     }
-                    else
+                }
+                else if (rcvBytes.Length == size)
+                {
+                    kmd3 = ToStruct(rcvBytes);
+                    if (kmd3.cmd == 1) //mmMove:1
                     {
-                        iGEVHeartbeatDisable.Value = true;
-                        Console.WriteLine("WARNING: Heartbeat on GigE camera disabled for the rest of Debug Mode.");
-                        Console.WriteLine(
-                            "         Power cycle camera when done debugging to re-enable the heartbeat...");
+                        Mode = DETECT;
+                        //this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSaveMainTime, RUN });
+                        this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSaveTimeOver, RUN });
+                        //保存処理開始
+                        if (this.States == RUN)
+                        {
+                            ImgSaveFlag = TRUE;
+                            // 過去データ保存
+                            if (appSettings.PreSaveNum > 0)
+                            {
+                                fifo.Saveflag_true_Last(appSettings.PreSaveNum);  // 1fr=0.2s  -> 5fr=1s 
+                            }
+                            this.States = SAVE;
+                            kalman_init();
+                            pos_mes.init();
+                            logger.Info("Save CMD recive:Save start.");
+                        }
                     }
+                    else if (kmd3.cmd == 90) //mmPidTest:90
+                    {
+                        Mode = PID_TEST;
+                        test_start_id = pid_data.id;
+                        //this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSaveMainTime, RUN });
+                        this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSaveTimeOver, RUN });
+                        //保存処理開始
+                        if (this.States == RUN)
+                        {
+                            ImgSaveFlag = TRUE;
+                            this.States = SAVE;
+                        }
+                    }
+                    else if (kmd3.cmd == 16) //mmLost:16
+                    {
+                        //Mode = LOST;
+                        //this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSaveMainTime, STOP });
+                        //this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSavePostTime, RUN });
+                    }
+                    else if (kmd3.cmd == 17) // mmMoveEnd             17  // 位置決め完了
+                    {
+                        Mode = DETECT_IN;
+                    }
+                    else if (kmd3.cmd == 18) // mmTruckEnd            18  // 追尾完了
+                    {
+                        //保存処理終了
+                        Mode = LOST;
+                        this.Invoke(new dlgTimer(ButtonSaveEnd_Click), new object[] { sender, e });
+                        //timerSave.Stop() x;
+                        //timerSave_Tick(sender, e) x;
+                        //timerSaveTimeOver.Stop() x;
+                        //ButtonSaveEnd_Click(sender, e) x;
+                    }
+                    else if (kmd3.cmd == 20) //mmData  20  // send fish pos data
+                    {
+                        //匿名デリゲートで表示する
+                        //this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSaveMainTime, STOP });
+                        //this.Invoke(new dlgSetColor(SetTimer), new object[] { timerSaveMainTime, RUN }); // main timer 延長
+                    }
+
+                    str = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss.fff") + " UDP " + kmd3.cmd.ToString("CMD:00") + " Az:" + kmd3.az + " Alt:" + kmd3.alt + " VAz:" + kmd3.vaz + " VAlt:" + kmd3.valt + "\n";
+                    this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, str });
+                    logger.Info(str);
+                    //bw.ReportProgress(0, kmd3);
                 }
                 else
                 {
-                    Console.WriteLine("Camera does not use GigE interface. Resuming normal execution...\n\n");
+                    string rcvMsg = enc.GetString(rcvBytes);
+                    str = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + "受信したデータ:[" + rcvMsg + "]\n";
+                    this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, str });
+                    logger.Info(str);
+                }
+
+                //str = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + "送信元アドレス:{0}/ポート番号:{1}/Size:{2}\n" + remoteEP.Address + "/" + remoteEP.Port + "/" + rcvBytes.Length;
+                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, str });
+            }
+
+            //UDP接続を終了
+            udpc.Close();
+        }
+        //メインスレッドでの処理
+        private void worker_udp_ProgressChanged(object sender, ProgressChangedEventArgs e)
+
+        {
+            // 画面表示
+            //MOTOR_DATA_KV_SP kmd3 = (MOTOR_DATA_KV_SP)e.UserState;
+            //string s = string.Format("worker_udp_ProgressChanged:[{0} {1} az:{2} alt:{3}]\n", kmd3.cmd, kmd3.t, kmd3.az, kmd3.alt);
+            //  richTextBox1.AppendText(s);
+            udpkv.kd = (KV_DATA)e.UserState;
+            udpkv.cal_mt3();
+            udpkv.cal_mt2();
+        }
+
+        static byte[] ToBytes(MOTOR_DATA_KV_SP obj)
+        {
+            int size = Marshal.SizeOf(typeof(MOTOR_DATA_KV_SP));
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(obj, ptr, false);
+            byte[] bytes = new byte[size];
+            Marshal.Copy(ptr, bytes, 0, size);
+            Marshal.FreeHGlobal(ptr);
+            return bytes;
+        }
+        static byte[] ToBytes(FSI_PID_DATA obj)
+        {
+            int size = Marshal.SizeOf(typeof(FSI_PID_DATA));
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(obj, ptr, false);
+            byte[] bytes = new byte[size];
+            Marshal.Copy(ptr, bytes, 0, size);
+            Marshal.FreeHGlobal(ptr);
+            return bytes;
+        }
+
+        public static MOTOR_DATA_KV_SP ToStruct(byte[] bytes)
+        {
+            GCHandle gch = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+            MOTOR_DATA_KV_SP result = (MOTOR_DATA_KV_SP)Marshal.PtrToStructure(gch.AddrOfPinnedObject(), typeof(MOTOR_DATA_KV_SP));
+            gch.Free();
+            return result;
+        }
+
+        public static KV_DATA ToStruct1(byte[] bytes)
+        {
+            GCHandle gch = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+            KV_DATA result = (KV_DATA)Marshal.PtrToStructure(gch.AddrOfPinnedObject(), typeof(KV_DATA));
+            gch.Free();
+            return result;
+        }
+
+
+        #endregion
+
+        #region アナログキャプチャー
+        // 別スレッド処理（キャプチャー）
+        private void worker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker bw = (BackgroundWorker)sender;
+            Stopwatch sw = new Stopwatch();
+            string str;
+            //id = 0;
+
+            //videoInputオブジェクト
+            int DeviceID = appSettings.CameraID; // 基本は、0　 // 3 (pro), 4(piccolo)  7(DMK)
+            int CaptureFps = (int)appSettings.Framerate;  // 30
+            int interval = (int)(1000 / CaptureFps / 10);
+
+            using (VideoInput vi = new VideoInput())
+            {
+                vi.SetIdealFramerate(DeviceID, CaptureFps);
+                vi.SetupDevice(DeviceID, appSettings.Width, appSettings.Height);
+
+                int width = vi.GetWidth(DeviceID);
+                int height = vi.GetHeight(DeviceID);
+
+                using (IplImage img = new IplImage(width, height, BitDepth.U8, 3))
+                //using (IplImage img_mono = new IplImage(width, height, BitDepth.U8, 1))
+                {
+                    long elapsed0 = 0, elapsed1 = 0;
+                    double framerate0 = 0, framerate1 = 0;
+                    double alfa_fr = 0.999;
+                    sw.Start();
+                    while (bw.CancellationPending == false)
+                    {
+                        if (vi.IsFrameNew(DeviceID))
+                        {
+                            DateTime dn = DateTime.Now; //取得時刻
+                            vi.GetPixels(DeviceID, img.ImageData, false, true);
+                            bw.ReportProgress(0, img);
+
+                            // 処理速度
+                            elapsed0 = sw.ElapsedTicks - elapsed1; // 1frameのticks
+                            elapsed1 = sw.ElapsedTicks;
+                            framerate0 = alfa_fr * framerate1 + (1 - alfa_fr) * (Stopwatch.Frequency / (double)elapsed0);
+                            framerate1 = framerate0;
+                            dFramerate = framerate0;
+
+                            str = String.Format("[{0,0:000}ms]", 1000 * elapsed0 / Stopwatch.Frequency);
+                            //匿名デリゲートで現在の時間をラベルに表示する
+                            this.Invoke(new dlgSetString(ShowLabelText), new object[] { label_frame_rate, str });
+                        }
+                        Application.DoEvents();
+                        Thread.Sleep(interval);
+                    }
+                    this.States = STOP;
+                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsStart, this.States });
+                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsEndButton, this.States });
+                    vi.StopDevice(DeviceID);
+                }
+            }
+        }
+        //
+        // アナログ画像保存
+        //
+        private void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            IplImage image = (IplImage)e.UserState;
+            Cv.Split(image, imgdata.img, null, null, null);
+
+            // 表示画像反転 実装場所　要検討
+            if (appSettings.FlipOn)
+            {
+                if (appSettings.Flipmode == OpenCvSharp.FlipMode.X || appSettings.Flipmode == OpenCvSharp.FlipMode.Y)
+                {
+                    Cv.Flip(imgdata.img, imgdata.img, appSettings.Flipmode);
+                }
+            }
+
+            // MT2 CCD Hot pixel (2015/5/16)
+            ccd_defect_correct(452, 272);
+            ccd_defect_correct(396, 330);
+            ccd_defect_correct(397, 330);
+            ccd_defect_correct(398, 330);
+            ccd_defect_correct(293, 433);
+            ccd_defect_correct(292, 433);
+            ccd_defect_correct(169, 408);
+            ccd_defect_correct(107, 303);
+            ccd_defect_correct(52, 320);
+            ccd_defect_correct(53, 320);
+            ccd_defect_correct(26, 340);
+            ccd_defect_correct(27, 191);
+            ccd_defect_correct(28, 191);
+            ccd_defect_correct(553, 243);
+            ccd_defect_correct(554, 243);
+            ccd_defect_correct(555, 243);
+            ccd_defect_correct(556, 243);
+            ccd_defect_correct(624, 252);
+            ccd_defect_correct(220, 41);
+
+            ++frame_id;
+            detect();
+            imgdata_push_FIFO();
+
+            if (checkBoxDispAvg.Checked == true)
+            {
+                Cv.RunningAvg(imgdata.img, imgAvg, 0.1);
+                //Cv.ShowImage("Video", imgAvg);
+            }
+        }
+
+        public void ccd_defect_correct(int x, int y)
+        {
+            CvScalar v1;
+            v1 = Cv.Get2D(imgdata.img, y - 3, x);
+            Cv.Set2D(imgdata.img, y - 1, x, v1);
+            v1 = Cv.Get2D(imgdata.img, y - 2, x);
+            Cv.Set2D(imgdata.img, y, x, v1);
+            v1 = Cv.Get2D(imgdata.img, y + 3, x);
+            Cv.Set2D(imgdata.img, y + 1, x, v1);
+
+            //v1.Val0 = 256;
+            //Cv.Set2D(imgdata.img, y+1, x, v1);
+
+        }
+
+        //BCB互換TDatetime値に変換
+        private double TDateTimeDouble(DateTime t)
+        {
+            TimeSpan ts = t - TBASE;   // BCB 1899/12/30 0:0:0 からの経過日数
+            return (ts.TotalDays);
+        }
+
+        //現在の時刻の表示と、タイマーの表示に使用されるデリゲート
+        delegate void dlgSetString(object lbl, string text);
+        //ボタンのカラー変更に使用されるデリゲート
+        delegate void dlgSetColor(object lbl, int state);
+        delegate void dlgTimer(object sender, EventArgs e);
+
+        //デリゲートで別スレッドから呼ばれてラベルに現在の時間又は
+        //ストップウオッチの時間を表示する
+        private void ShowRText(object sender, string str)
+        {
+            RichTextBox rtb = (RichTextBox)sender;　//objectをキャストする
+            rtb.AppendText(str);
+        }
+        private void ShowText(object sender, string str)
+        {
+            TextBox rtb = (TextBox)sender;　//objectをキャストする
+            rtb.Text = str;
+        }
+        private void ShowLabelText(object sender, string str)
+        {
+            Label rtb = (Label)sender;　//objectをキャストする
+            rtb.Text = str;
+        }
+        private void SetColor(object sender, int sta)
+        {
+            Button rtb = (Button)sender;　//objectをキャストする
+            if (sta == RUN)
+            {
+                rtb.BackColor = Color.Red;
+            }
+            else if (sta == STOP)
+            {
+                rtb.BackColor = Color.FromKnownColor(KnownColor.Control);
+            }
+        }
+        private void SetTimer(object sender, int sta)
+        {
+            System.Windows.Forms.Timer tim = (System.Windows.Forms.Timer)sender;　//objectをキャストする
+            if (sta == RUN)
+            {
+                tim.Start();
+            }
+            else if (sta == STOP)
+            {
+                tim.Stop();
+            }
+        }
+
+        private void worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            // First, handle the case where an exception was thrown.
+            if (e.Error != null)
+            {
+                MessageBox.Show(e.Error.Message);
+            }
+            else if (e.Cancelled)
+            {
+                // Next, handle the case where the user canceled 
+                // the operation.
+                // Note that due to a race condition in 
+                // the DoWork event handler, the Cancelled
+                // flag may not have been set, even though
+                // CancelAsync was called.
+                this.ObsStart.BackColor = Color.FromKnownColor(KnownColor.Control);
+                this.ObsEndButton.BackColor = Color.FromKnownColor(KnownColor.Control);
+            }
+            this.States = STOP;
+        }
+        #endregion
+
+        void star_setup()
+        {
+            double azc = 0;
+            double altc = 90;
+            double theta = 178.3;
+            double fl = 2.670;
+            double xc = 960 - 25;
+            double yc = 600 + 15;
+            int fov = 170; //[deg]    690; //pixel
+
+            // 初期化　CCD上の星位置計算
+            DateTime t = new DateTime(2018, 3, 14, 1, 30, 1);
+            //star.init(t);
+            //star.init_BSC(t, @"S:\satoshi\Lib\bsc5.dat");
+            star.init_BSC(t, @"bsc5.dat");
+            star.cam.init(azc, altc, theta, fl, 0, 0, 0, xc, yc);
+            star.cal_ccd_xy();
+            star.cam.EFOV = fov;
+        }
+
+        private void ShowButton_Click(object sender, EventArgs e)
+        {
+            uEye_PostSave_settings();
+            /*
+             Pid_Data_Send_KV1000_SpCam2((short)frame_id, daz, dalt, 1);
+
+            // Obs End test
+            ObsEndButton_Click(sender, e);
+            timerWaitShutdown.Start();
+
+            //AVT
+            /*
+            if (cam_maker == Camera_Maker.AVT)
+            {
+                avt_cam_start();
+            }
+            */
+        }
+
+        private void CloseButton_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            //Pid_Data_Send();
+
+            // Basler
+            if (cam_maker == Camera_Maker.Basler)
+            {
+                if (this.checkBox_WideDR.Checked)
+                {
+                    m_imageProvider.SetupGain(1024);
+                }
+                //pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+                else
+                {
+                    m_imageProvider.SetupGain(100);
+                    //pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+                }
+            }
+
+            // IDS
+            if (cam_maker == Camera_Maker.IDS)
+            {
+                /*  Detect()に実装
+                statusRet = cam.Timing.Exposure.Get(out gx);
+                if (gx > set_exposure - 1)
+                    statusRet = cam.Timing.Exposure.Set(set_exposure1);
+                else
+                    statusRet = cam.Timing.Exposure.Set(set_exposure);
+                */
+            }
+        }
+
+        private void ObsEndButton_Click(object sender, EventArgs e)
+        {
+            this.States = STOP;
+            timerDisplay.Enabled = false;
+            this.ObsEndButton.Enabled = false;
+            this.ObsEndButton.BackColor = Color.Red;
+            this.ObsStart.Enabled = true;
+            this.ObsStart.BackColor = Color.FromKnownColor(KnownColor.Control);
+
+            //AVT
+            if (cam_maker == Camera_Maker.AVT)
+            {
+                avt_cam_end();
+            }
+            //Basler
+            if (cam_maker == Camera_Maker.Basler)
+            {
+                Stop(); /* Stops the grabbing of images. */
+                BaslerEnd();
+            }
+            //PGR
+            if (cam_maker == Camera_Maker.PointGreyCamera)
+            {
+                ClosePGRcamera();
+            }
+            //IDS
+            if (cam_maker == Camera_Maker.IDS)
+            {
+                if (cam.Acquisition.Stop() == uEye.Defines.Status.SUCCESS)
+                {
+                }
+                cam.Exit();
+            }
+            //ImaginSouse
+            if (cam_maker == Camera_Maker.ImagingSouce)
+            {
+                //icImagingControl1.LiveStop();
+            }
+            //analog
+            if (cam_maker == Camera_Maker.analog)
+            {
+                // BackgroundWorkerを停止.
+                if (worker.IsBusy)
+                {
+                    this.worker.CancelAsync();
+                }
+            }
+        }
+
+        private void ObsStart_Click(object sender, EventArgs e)
+        {
+            //AVT
+            if (cam_maker == Camera_Maker.AVT)
+            {
+                avt_cam_start();
+            }
+            // Basler
+            if (cam_maker == Camera_Maker.Basler)
+            {
+                BaslerStart(0);   /* 0: Get a handle for the first device found.  */
+                ContinuousShot(); /* Start the grabbing of images until grabbing is stopped. */
+            }
+            //PGR
+            if (cam_maker == Camera_Maker.PointGreyCamera)
+            {
+                OpenPGRcamera();
+            }
+            //IDS
+            if (cam_maker == Camera_Maker.IDS)
+            {
+                OpenIDScamera();
+                statusRet = cam.Acquisition.Capture();
+                if (statusRet != uEye.Defines.Status.SUCCESS)
+                {
+                    string s = "Start Live Video failed. IDS cam.";
+                    richTextBox1.AppendText(s);
+                    logger.Info(s);
+                    cam.Exit();
+                    return;
+                }
+            }
+            //analog
+            if (cam_maker == Camera_Maker.analog)
+            {
+                // BackgroundWorkerを開始
+                if (!worker.IsBusy)
+                {
+                    this.worker.RunWorkerAsync();
+                }
+            }
+
+            LiveStartTime = DateTime.Now;
+            this.States = RUN;
+            timerDisplay.Enabled = true;
+            this.ObsStart.Enabled = false;
+            this.ObsStart.BackColor = Color.Red;
+            this.ObsEndButton.Enabled = true;
+            this.ObsEndButton.BackColor = Color.FromKnownColor(KnownColor.Control);
+        }
+
+        private void buttonSave_Click(object sender, EventArgs e)
+        {
+            Save_proc();
+        }
+        private void Save_proc()
+        {
+            if (this.States == RUN)
+            {
+                ImgSaveFlag = TRUE;
+                this.States = SAVE;
+                this.timerSave.Enabled = true;
+                // 過去データ保存
+                if (appSettings.PreSaveNum > 0)
+                {
+                    fifo.Saveflag_true_Last(appSettings.PreSaveNum);  // 1fr=0.2s  -> 5fr=1s 
+                }
+                logger.Info("Save_proc:Start.");
+            }
+        }
+
+        private void ButtonSaveEnd_Click(object sender, EventArgs e)
+        {
+            SaveEnd_proc();
+        }
+        private void SaveEnd_proc()
+        {
+            ImgSaveFlag = FALSE;
+            this.States = RUN;
+            this.timerSave.Enabled = false;
+            logger.Info("Save_proc:End.");
+        }
+        // settingsの作成
+        private void buttonMakeDark_Click(object sender, EventArgs e)
+        {
+            SettingsMake();
+            //appSettings = SettingsLoad(21);
+            SaveAvgImage();
+            star_adaptive_threshold = (int)numericUpDownStarMin.Value; // kenyou  0-5 月、惑星  6:シリウス　7:ベガ
+        }
+
+        #region TimerTick
+        //
+        // Timer Tick
+        private void timerSaveTimeOver_Tick(object sender, EventArgs e)
+        {
+            timerSaveTimeOver.Stop();
+            timerSavePost.Stop();
+            Mode = LOST;
+            if (pgr_post_save)
+            {
+                pgr_Normal_settings();
+                uEye_Normal_settings();
+                pgr_post_save = false;
+            }
+            ButtonSaveEnd_Click(sender, e);
+        }
+
+        private void timerSave_Tick(object sender, EventArgs e)
+        {
+            Mode = LOST;
+            timerSave.Stop();
+
+            if (appSettings.PostSaveProcess)
+            {
+                //　カメラ毎の処理
+                if (!pgr_post_save)
+                {
+                    pgr_PostSave_settings();
+                    uEye_PostSave_settings();
+                    timerSavePost.Start();
+                    pgr_post_save = true;
+                    return;
+                }
+            }
+
+            pgr_post_save = false;
+            timerSaveTimeOver.Stop();
+            ButtonSaveEnd_Click(sender, e);
+        }
+        private void timerSavePostTime_Tick(object sender, EventArgs e)
+        {
+            Mode = LOST;
+            timerSaveTimeOver.Stop();
+            timerSavePost.Stop();
+            pgr_Normal_settings();
+            uEye_Normal_settings();
+            pgr_post_save = false;
+            ButtonSaveEnd_Click(sender, e);
+        }
+
+        //       private void timerSaveMainTime_Tick(object sender, EventArgs e)
+        //       {
+        //           timerSavePost.Stop();
+        //       }
+
+        private void timerMakeDark_Tick(object sender, EventArgs e)
+        {
+            timerDisplay.Enabled = false;
+            //DarkMode = FALSE;
+        }
+
+        private void timerObsOnOff_Tick(object sender, EventArgs e)
+        {
+            TimeSpan nowtime = DateTime.Now - DateTime.Today;
+            //TimeSpan endtime = new TimeSpan(7, 0, 0);
+            //TimeSpan starttime = new TimeSpan(16,30, 0);
+
+
+            if (nowtime.CompareTo(endtime) >= 0 && nowtime.CompareTo(starttime) <= 0)
+            {
+                // DayTime
+                if (this.States == RUN && checkBoxObsAuto.Checked)
+                {
+                    ObsEndButton_Click(sender, e);
+                    timerWaitShutdown.Start();
                 }
             }
             else
             {
-                Console.WriteLine("Unable to access TL device nodemap. Aborting...");
-                return -1;
-            }
-
-            return 0;
-        }
-#endif
-
-        private void Button1_Click(object sender, EventArgs e)
-        {
-            // 画像の読み込み
-            using (Mat mat = new Mat(@"C:\Users\root\Pictures\MT3Color_aliment.jpg"))
-            {
-                // 画像をウィンドウに表示
-                Cv2.ImShow("sample_show", mat);
+                //NightTime
+                if (this.States == STOP && checkBoxObsAuto.Checked)
+                {
+                    ObsStart_Click(sender, e);
+                }
             }
         }
 
-        // set image size
-        private const int AllocSize = 4096 * 3000 * 1;
-        //MarshalクラスのCopyメソッドで一括コピー
-        private static void MarshalCopy(IntPtr src, IntPtr dest)
+        private void timerWaitShutdown_Tick(object sender, EventArgs e)
         {
-            byte[] temp = new byte[AllocSize];
-            Marshal.Copy(src, temp, 0, AllocSize);
-            Marshal.Copy(temp, 0, dest, AllocSize);
+            shutdown(sender, e);
         }
 
-        //UnmanagedMemoryStreamでbyte配列経由で一括コピー
-        private unsafe static void UnsafeStream(IntPtr src, IntPtr dest)
+        private void timerMTmonSend_Tick(object sender, EventArgs e)
         {
-            using (UnmanagedMemoryStream streamSrc = new UnmanagedMemoryStream((byte*)src, AllocSize))
-            using (UnmanagedMemoryStream streamDst = new UnmanagedMemoryStream((byte*)dest, AllocSize, AllocSize, FileAccess.Write))
+            MTmon_Data_Send(sender);
+        }
+
+        private void timer1min_Tick(object sender, EventArgs e)
+        {
+            diskspace = cDrive.TotalFreeSpace;
+
+            //　PGR ポスト処理不具合暫定対応用
+            if (States == RUN && appSettings.PostSaveProcess)
             {
-                byte[] temp = new byte[AllocSize];
-                streamSrc.Read(temp, 0, AllocSize);
-                streamDst.Write(temp, 0, AllocSize);
+                if (!check_uEye_normal_mode()) uEye_Normal_settings();
+
+                if (pgr_post_save == true && !timerSavePost.Enabled)
+                {
+                    pgr_Normal_settings();
+                    uEye_Normal_settings();
+                    pgr_post_save = false;
+                }
+               /* else if (dFramerate < 2.0 && !timerSavePost.Enabled)
+                {
+                    ObsEndButton_Click(sender, e);
+                }
+                */
             }
         }
 
-        // UnmanagedMemoryStreamでCopyToで一括コピー
-        private unsafe static void CopyTo(IntPtr src, IntPtr dest)
+        private void checkBoxGainBoost_CheckedChanged(object sender, EventArgs e)
         {
-            using (UnmanagedMemoryStream streamSrc = new UnmanagedMemoryStream((byte*)src, AllocSize))
-            using (UnmanagedMemoryStream streamDst = new UnmanagedMemoryStream((byte*)dest, AllocSize, AllocSize, FileAccess.Write))
+            // IDS
+            if (cam_maker == Camera_Maker.IDS)
             {
-                streamSrc.CopyTo(streamDst);
+                cam.Gain.Hardware.Boost.SetEnable(checkBoxDispAvg.Checked);
             }
         }
 
-        // kernel32.dllのCopyMemory関数を利用して一括コピー
-        [DllImport("kernel32.dll")]        private static extern void CopyMemory(IntPtr dst, IntPtr src, int size);
-        private static void CopyMemory(IntPtr src, IntPtr dest)
+        private void timerAutoStarData_Tick(object sender, EventArgs e)
         {
-            CopyMemory(src, dest, AllocSize);
+            if (checkBox_WideDR.Checked)
+            {
+                buttonMove_Click(sender, e);
+            }
+        }
+
+        #endregion
+
+
+        private void checkBoxObsAuto_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBoxObsAuto.Checked)
+            {
+                this.ObsStart.Enabled = false;
+                this.ObsEndButton.Enabled = false;
+            }
+            else
+            {
+                if (States == RUN)
+                {
+                    this.ObsStart.Enabled = false;
+                    this.ObsEndButton.Enabled = true;
+                }
+                if (States == SAVE)
+                {
+                    this.ObsStart.Enabled = false;
+                    this.ObsEndButton.Enabled = true;
+                }
+                if (States == STOP)
+                {
+                    this.ObsStart.Enabled = true;
+                    this.ObsEndButton.Enabled = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// システムシャットダウン
+        /// </summary>
+        /// <param name="capacity">シャットダウン</param>
+        private void shutdown(object sender, EventArgs e)
+        {
+            System.Diagnostics.ProcessStartInfo psi = new System.Diagnostics.ProcessStartInfo();
+            psi.FileName = "shutdown.exe";
+            //コマンドラインを指定
+            psi.Arguments = "-s -f";
+            //ウィンドウを表示しないようにする（こうしても表示される）
+            psi.CreateNoWindow = true;
+            //起動
+            System.Diagnostics.Process p = System.Diagnostics.Process.Start(psi);
         }
 
 
-        // This function acquires and saves 10 images from a device.
-        static int AcquireImages(IManagedCamera cam, INodeMap nodeMap, INodeMap nodeMapTLDevice)
+        /// <summary>
+        /// 回転座標計算ルーチン
+        /// IN:中心座標 CvPoint2D64f
+        ///    半径　double
+        ///    回転角　double
+        /// OUT:目標座標 CvPoint2D64f
+        /// </summary>
+        /// <param name="capacity">画像表示用回転座標計算ルーチン</param>
+        public CvPoint2D64f Rotation(CvPoint2D64f xy, double r, double theta)
         {
-            int result = 0;
+            double sinth = 0, costh = r;
+            CvPoint2D64f ans = new CvPoint2D64f();
 
-            Console.WriteLine("\n*** IMAGE ACQUISITION ***\n");
-
-            try
+            if (appSettings.CamPlatform == Platform.MT2 && udpkv.mt2mode == udpkv.mmWest)
             {
-                //
-                // Set acquisition mode to continuous
-                //
-                // *** NOTES ***
-                // Because the example acquires and saves 10 images, setting
-                // acquisition mode to continuous lets the example finish. If
-                // set to single frame or multiframe (at a lower number of
-                // images), the example would just hang. This is because the
-                // example has been written to acquire 10 images while the
-                // camera would have been programmed to retrieve less than that.
-                //
-                // Setting the value of an enumeration node is slightly more
-                // complicated than other node types. Two nodes are required:
-                // first, the enumeration node is retrieved from the nodemap and
-                // second, the entry node is retrieved from the enumeration node.
-                // The symbolic of the entry node is then set as the new value
-                // of the enumeration node.
-                //
-                // Notice that both the enumeration and entry nodes are checked
-                // for availability and readability/writability. Enumeration
-                // nodes are generally readable and writable whereas entry
-                // nodes are only ever readable.
-                //
-                // Retrieve enumeration node from nodemap
-                IEnum iAcquisitionMode = nodeMap.GetNode<IEnum>("AcquisitionMode");
-                if (iAcquisitionMode == null || !iAcquisitionMode.IsWritable)
+                sinth = Math.Sin(-(theta + 90) * Math.PI / 180.0);
+                costh = Math.Cos(-(theta + 90) * Math.PI / 180.0);
+                ans.Y = -costh * r;
+                ans.X = +sinth * r;
+            }
+            if (appSettings.CamPlatform == Platform.MT2 && udpkv.mt2mode == udpkv.mmEast)
+            {
+                sinth = Math.Sin(-(theta + 90) * Math.PI / 180.0);
+                costh = Math.Cos(-(theta + 90) * Math.PI / 180.0);
+                ans.Y = -costh * r;
+                ans.X = +sinth * r;
+            }
+
+            return (ans + xy);
+        }
+        /// <summary>
+        /// 画像表示ルーチン
+        /// </summary>
+        /// <param name="capacity">画像表示用タイマールーチン</param>
+        private void timerDisplay_Tick(object sender, EventArgs e)
+        {
+            if (this.States == STOP) return;
+
+            int id = System.Threading.Thread.CurrentThread.ManagedThreadId; Console.WriteLine("timerDisplay_Tick ThreadID : " + id);
+
+            //OpenCV　表示ルーチン
+            if (imgdata.img != null)
+            {
+                // カラー判定
+                if (cam_color == Camera_Color.mono)
                 {
-                    Console.WriteLine("Unable to set acquisition mode to continuous (node retrieval). Aborting...\n");
-                    return -1;
-                }
-
-                // Retrieve entry node from enumeration node
-                IEnumEntry iAcquisitionModeContinuous = iAcquisitionMode.GetEntryByName("Continuous");
-                if (iAcquisitionModeContinuous == null || !iAcquisitionMode.IsReadable)
-                {
-                    Console.WriteLine(
-                        "Unable to set acquisition mode to continuous (enum entry retrieval). Aborting...\n");
-                    return -1;
-                }
-
-                // Set symbolic from entry node as new value for enumeration node
-                iAcquisitionMode.Value = iAcquisitionModeContinuous.Symbolic;
-
-                Console.WriteLine("Acquisition mode set to continuous...");
-
-#if DEBUG
-                Console.WriteLine("\n\n*** DEBUG ***\n\n");
-                // If using a GEV camera and debugging, should disable heartbeat first to prevent further issues
-
-                if (DisableHeartbeat(cam, nodeMap, nodeMapTLDevice) != 0)
-                {
-                    return -1;
-                }
-
-                Console.WriteLine("\n\n*** END OF DEBUG ***\n\n");
-#endif
-                //
-                // Begin acquiring images
-                //
-                // *** NOTES ***
-                // What happens when the camera begins acquiring images depends
-                // on which acquisition mode has been set. Single frame captures
-                // only a single image, multi frame catures a set number of
-                // images, and continuous captures a continuous stream of images.
-                // Because the example calls for the retrieval of 10 images,
-                // continuous mode has been set for the example.
-                //
-                // *** LATER ***
-                // Image acquisition must be ended when no more images are needed.
-                //
-                cam.BeginAcquisition();
-
-                Console.WriteLine("Acquiring images...");
-
-                //
-                // Retrieve device serial number for filename
-                //
-                // *** NOTES ***
-                // The device serial number is retrieved in order to keep
-                // different cameras from overwriting each other's images.
-                // Grabbing image IDs and frame IDs make good alternatives for
-                // this purpose.
-                //
-                String deviceSerialNumber = "";
-
-                IString iDeviceSerialNumber = nodeMapTLDevice.GetNode<IString>("DeviceSerialNumber");
-                if (iDeviceSerialNumber != null && iDeviceSerialNumber.IsReadable)
-                {
-                    deviceSerialNumber = iDeviceSerialNumber.Value;
-
-                    Console.WriteLine("Device serial number retrieved as {0}...", deviceSerialNumber);
-                }
-                Console.WriteLine();
-
-                // Retrieve, convert, and save images
-                const int NumImages = 1000;
-
-                for (int imageCnt = 0; imageCnt < NumImages; imageCnt++)
-                {
-                    try
+                    if (checkBoxDispAvg.Checked == true)
                     {
-                        //
-                        // Retrieve next received image
-                        //
-                        // *** NOTES ***
-                        // Capturing an image houses images on the camera buffer.
-                        // Trying to capture an image that does not exist will
-                        // hang the camera.
-                        //
-                        // Using-statements help ensure that images are released.
-                        // If too many images remain unreleased, the buffer will
-                        // fill, causing the camera to hang. Images can also be
-                        // released manually by calling Release().
-                        //
-                        using (IManagedImage rawImage = cam.GetNextImage(1000))
-                        {
-                            //
-                            // Ensure image completion
-                            //
-                            // *** NOTES ***
-                            // Images can easily be checked for completion. This
-                            // should be done whenever a complete image is
-                            // expected or required. Alternatively, check image
-                            // status for a little more insight into what
-                            // happened.
-                            //
-                            if (rawImage.IsIncomplete)
-                            {
-                                Console.WriteLine("Image incomplete with image status {0}...", rawImage.ImageStatus);
-                            }
-                            else
-                            {
-                                //
-                                // Print image information; width and height
-                                // recorded in pixels
-                                //
-                                // *** NOTES ***
-                                // Images have quite a bit of available metadata
-                                // including CRC, image status, and offset
-                                // values to name a few.
-                                //
-                                uint width = rawImage.Width;
-
-                                uint height = rawImage.Height;
-
-                                Console.WriteLine(
-                                    "Grabbed image {0}, width = {1}, height = {2}", imageCnt, width, height);
-
-                                // 画像の切り抜き
-                                //Mat mat1 = new Mat(100, 200, MatType.CV_64FC1);
-                                using (Mat mat2 = new Mat((int)height, (int)width, MatType.CV_8U)) //mono8
-                                {
-                                    try
-                                    {
-                                        //camera.QueueFrame(frame);
-
-                                        //System.Object lockThis = new System.Object();
-                                        //lock (lockThis)
-                                        lock (rawImage)
-                                        {
-                                            //imgdata_push_FIFO(frame.Buffer);
-
-                                            //img_dmk は使わず、直接imgdata.imgにコピー (0.3ms)
-                                            // DataPtr  intptr
-                                            //System.Runtime.InteropServices.Marshal.Copy(rawImage.DataPtr, 0, mat2.Data, rawImage.DataSize);
-
-                                            // unsafeバージョン(0.2-0.3ms)
-                                            //  unsafe
-                                            // {
-                                            //      fixed (byte* pbytes = frame.Buffer)
-                                            //      {
-                                            //MarshalCopy(rawImage.DataPtr, mat2.Data);//OK
-                                            //CopyMemory(rawImage.DataPtr, mat2.Data);//, (int)rawImage.DataSize); 上手くいかない。
-                                            CopyTo(rawImage.DataPtr, mat2.Data);//OK
-                                                                                //      }
-                                                                                // }
-                                        }
-                                    }
-                                    catch (SpinnakerException ex)
-                                    {
-                                        Console.WriteLine("Spin. Error {0}", ex);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        string str = ex.Data.ToString();
-                                        Console.WriteLine("Error {0}", str);
-                                        //Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, str });
-                                    }
-
-                                    Cv2.ImShow("grayscale_show", mat2);
-                                }
-
-                                //
-                                // Convert image to mono 8
-                                //
-                                // *** NOTES ***
-                                // Images can be converted between pixel formats
-                                // by using the appropriate enumeration value.
-                                // Unlike the original image, the converted one
-                                // does not need to be released as it does not
-                                // affect the camera buffer.
-                                //
-                                // Using statements are a great way to ensure code
-                                // stays clean and avoids memory leaks.
-                                // leaks.
-                                //
-                                using (IManagedImage convertedImage = rawImage.Convert(PixelFormatEnums.Mono8))
-                                {
-                                    // Create a unique filename
-                                    String filename = "Acquisition-CSharp-";
-                                    if (deviceSerialNumber != "")
-                                    {
-                                        filename = filename + deviceSerialNumber + "-";
-                                    }
-                                    filename = filename + imageCnt + ".jpg";
-
-                                    //
-                                    // Save image
-                                    //
-                                    // *** NOTES ***
-                                    // The standard practice of the examples is
-                                    // to use device serial numbers to keep
-                                    // images of one device from overwriting
-                                    // those of another.
-                                    //
-
-                                    ///convertedImage.Save(filename);
-
-                                    Console.WriteLine("Image saved at {0}\n", filename);
-                                }
-                            }
-                        }
+                        // 移動平均画像の表示
+                        double scale = 8.0;
+                        Cv.ConvertScale(imgAvg, img_dmk, scale);
+                        //Cv.ConvertScale(fifo.backgroundImageF(), img_dmk, scale);
+                        Cv.CvtColor(img_dmk, img_dmk3, ColorConversion.GrayToBgr);
                     }
-                    catch (SpinnakerException ex)
+                    else
                     {
-                        Console.WriteLine("Error: {0}", ex.Message);
-                        result = -1;
+                        Cv.CvtColor(imgdata.img, img_dmk3, ColorConversion.GrayToBgr);
                     }
-                }
-
-                //
-                // End acquisition
-                //
-                // *** NOTES ***
-                // Ending acquisition appropriately helps ensure that devices
-                // clean up properly and do not need to be power-cycled to
-                // maintain integrity.
-                //
-                cam.EndAcquisition();
-            }
-            catch (SpinnakerException ex)
-            {
-                Console.WriteLine("Error: {0}", ex.Message);
-                result = -1;
-            }
-
-            return result;
-        }
-
-        // This function prints the device information of the camera from the
-        // transport layer; please see NodeMapInfo_CSharp example for more
-        // in-depth comments on printing device information from the nodemap.
-        static int PrintDeviceInfo(INodeMap nodeMap)
-        {
-            int result = 0;
-
-            try
-            {
-                Console.WriteLine("\n*** DEVICE INFORMATION ***\n");
-
-                ICategory category = nodeMap.GetNode<ICategory>("DeviceInformation");
-                if (category != null && category.IsReadable)
-                {
-                    for (int i = 0; i < category.Children.Length; i++)
-                    {
-                        Console.WriteLine(
-                            "{0}: {1}",
-                            category.Children[i].Name,
-                            (category.Children[i].IsReadable ? category.Children[i].ToString()
-                             : "Node not available"));
-                    }
-                    Console.WriteLine();
                 }
                 else
                 {
-                    Console.WriteLine("Device control information not available.");
+                    Cv.CvtColor(imgdata.img, img_dmk3, ColorConversion.BayerGbToBgr);
                 }
-            }
-            catch (SpinnakerException ex)
-            {
-                Console.WriteLine("Error: {0}", ex.Message);
-                result = -1;
-            }
 
-            return result;
-        }
+                double k1 = 1.3333; //4deg 
+                double k2 = 0.3333; //直径1deg
+                double roa = appSettings.Roa;
 
-        // This function acts as the body of the example; please see
-        // NodeMapInfo_CSharp example for more in-depth comments on setting up
-        // cameras.
-        int RunSingleCamera(IManagedCamera cam)
-        {
-            int result = 0;
+                CvPoint2D64f OCPoint = new CvPoint2D64f(appSettings.Xoa, appSettings.Yoa);
+                Cv.Circle(img_dmk3, OCPoint, (int)roa, new CvColor(200, 0, 255));
 
-            try
-            {
-                // Retrieve TL device nodemap and print device information
-                INodeMap nodeMapTLDevice = cam.GetTLDeviceNodeMap();
+                CvPoint2D64f Point1;
+                CvPoint2D64f Point2;
+                String str;
 
-                result = PrintDeviceInfo(nodeMapTLDevice);
+                if (udpkv.mt2mode == udpkv.mmWest)
+                {
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
+                    Cv.Circle(img_dmk3, Point1, 5, new CvColor(0, 255, 0));       // Arrow
 
-                // Initialize camera
-                cam.Init();
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c + 90);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c + 90);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
 
-                // Retrieve GenICam nodemap
-                INodeMap nodeMap = cam.GetNodeMap();
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c + 180);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c + 180);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
 
-                // Acquire images
-                result = result | AcquireImages(cam, nodeMap, nodeMapTLDevice);
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c + 270);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c + 270);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(230, 105, 0));
 
-                // Deinitialize camera
-                cam.DeInit();
-            }
-            catch (SpinnakerException ex)
-            {
-                Console.WriteLine("Error: {0}", ex.Message);
-                result = -1;
-            }
+                    str = String.Format("ID:{4,7:D1} W: dAz({5,6:F1},{6,6:F1}) dPix({0,6:F1},{1,6:F1})({2,6:F0})({3,0:00}), th:{7,6:F1}", gx, gy, max_val, max_label, frame_id, daz, dalt, theta_c);
+                }
+                else
+                {
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
+                    //Cv.Circle(img_dmk3, Point1, 5, new CvColor(0, 255, 0));       // Arrow
 
-            return result;
-        }
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c + 90);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c + 90);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(230, 105, 0));
+                    //Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
 
-        private void Button2_Click(object sender, EventArgs e)
-        {
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c + 180);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c + 180);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
+                    Cv.Circle(img_dmk3, Point1, 5, new CvColor(0, 255, 0));       // Arrow
 
-            // Example entry point; please see Enumeration_CSharp example for more
-            // in-depth comments on preparing and cleaning up the system.
-            //static int Main(string[] args)
-            {
-                int result = 0;
+                    Point1 = Rotation(OCPoint, k1 * roa, theta_c + 270);
+                    Point2 = Rotation(OCPoint, k2 * roa, theta_c + 270);
+                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
+                    //Cv.Line(img_dmk3, Point1, Point2, new CvColor(230, 105, 0));
 
-                //Program program = new Program();
+                    str = String.Format("ID:{4,7:D1} E: dAz({5,6:F1},{6,6:F1}) dPix({0,6:F1},{1,6:F1})({2,6:F0})({3,0:00}), th:{7,6:F1}", gx, gy, max_val, max_label, frame_id, daz, dalt, theta_c);
 
-                // Since this application saves images in the current folder
-                // we must ensure that we have permission to write to this folder.
-                // If we do not have permission, fail right away.
-                FileStream fileStream;
+                }
+                if (img_dmk3.Width >= 1600)
+                {
+                    img_dmk3.PutText(str, new CvPoint(12, 24), font_big, new CvColor(0, 150, 250));
+                } else
+                {
+                    img_dmk3.PutText(str, new CvPoint(6, 12), font, new CvColor(0, 150, 250));
+                }
+                img_dmk3.Circle(new CvPoint((int)Math.Round(gx), (int)Math.Round(gy)), (int)(roa*max_val/1000), new CvColor(0, 100, 255));
+                img_dmk3.Circle(new CvPoint((int)Math.Round(gx), (int)Math.Round(gy)), (int)(10), new CvColor(0, 100, 255));
+                //cvwin.Image = imgAvg;
+
+                // Star display for Fish2
+                int cx, cy, r_mag;
+                for (int i = 0; i < star.Count; ++i)
+                {
+                    get_star_disp_pos(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpx, out cx, out cy, out r_mag);
+                    OCPoint.X = appSettings.Xoa + cx;
+                    OCPoint.Y = appSettings.Yoa + cy;
+                    Cv.Circle(img_dmk3, OCPoint, 2 * r_mag, new CvColor(0, 255, 0));
+                }
+
                 try
                 {
-                    fileStream = new FileStream(@"test.txt", FileMode.Create);
-                    fileStream.Close();
-                    File.Delete("test.txt");
+                    pictureBox1.Image = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
+                }
+                catch (System.ArgumentException ex_a)
+                {
+                    this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, frame_id.ToString() });
+                    logger.Error(ex_a.Message);
+                    return;
+                }
+                catch (System.Exception ex)
+                {
+                    //すべての例外をキャッチする
+                    //例外の説明を表示する
+                    //匿名デリゲートで表示する
+                    this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                    logger.Error(ex.Message);
+                    System.Console.WriteLine(ex.Message);
+                    return;
+                }
+            }
+            string s = null;
+            if (appSettings.CamPlatform == Platform.MT2)
+            {
+                //string s = string.Format("KV:[x2:{0:D6} y2:{1:D6} x2v:{2:D5} y2v:{3:D5} {4} {5}]\n", udpkv.x2pos, udpkv.y2pos, udpkv.x2v, udpkv.y2v, udpkv.binStr_status, udpkv.binStr_request);
+                s = string.Format("KV:[x1:{0:D6} y1:{1:D6} Az1:{2,6:F1} Alt1:{3,6:F1}]\n", udpkv.xpos, udpkv.ypos, udpkv.az1_c, udpkv.alt1_c);
+            }
+            if (appSettings.CamPlatform == Platform.MT3 || appSettings.CamPlatform == Platform.Fish2)
+            {
+                s = string.Format("KV:[x2:{0:D6} y2:{1:D6} Az2:{2,6:F1} Alt2:{3,6:F1}]\n", udpkv.x2pos, udpkv.y2pos, udpkv.az2_c, udpkv.alt2_c);
+            }
+            label_X2Y2.Text = s;
+
+            //       label_ID.Text = max_label.ToString("00000");
+            //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, id.ToString() });
+            // Status表示
+            //this.Invoke(new dlgSetString(ShowLabelText), new object[] { label_X2Y2, String.Format("({0},{1}", udpkv.az2_c, udpkv.alt2_c) });
+
+            //long frame_timestamp=0;
+            //double dFramerate = 0; // Frame rate[fr/s]
+            //double dExpo = 0; // Exposure[us]
+            //long igain = 0; //Gain
+            // Error rate
+            long frame_total = 0, frame_error = 0;
+            long frame_underrun = 0, frame_shoved = 0, frame_dropped = 0;
+            double err_rate = 0;
+
+            // IDS
+            if (cam_maker == Camera_Maker.IDS)
+            {
+                cam.Timing.Framerate.GetCurrentFps(out dFramerate); //IDS
+                statusRet = cam.Timing.Exposure.Get(out dExpo);//[ms]
+                dExpo *= 1000; // [us]
+                int ig;
+                cam.Gain.Hardware.Scaled.GetMaster(out ig);
+                igain = ig;
+                uEye.Types.CaptureStatus captureStatus;
+                cam.Information.GetCaptureStatus(out captureStatus); //IDS ueye
+                frame_error = (long)captureStatus.Total;
+                frame_total = (long)(imageInfo.FrameNumber - ueye_frame_number);
+            }
+            // PGR
+            if (cam_maker == Camera_Maker.PointGreyCamera)
+            {
+                dFramerate = pgr_frame_rate; // frame rate [fps]
+                dExpo = pgr_image_expo; // [us]
+                igain = pgr_image_gain;
+                //uEye.Types.CaptureStatus captureStatus;
+                //cam.Information.GetCaptureStatus(out captureStatus); //IDS ueye
+                //frame_error = (long)captureStatus.Total;
+                frame_total = (long)(pgr_image_frame_count);
+                reqFramerate = pgr_getFrameRate();
+                frame_underrun = (int)(100 * pgr_getEV());
+                label_frame_rate.Text = pgr_BusSpeed().ToString() + " " + ((pgr_Temperature(pgr_cam) - 2732) / 10.0).ToString();
+            }
+            // Basler
+            if (cam_maker == Camera_Maker.Basler)
+            {
+                dFramerate = m_imageProvider.GetFrameRate(); // Basler
+                dExpo = GetExposureTime();
+                igain = GetGain();
+                frame_timestamp = m_imageProvider.GetTimestamp();
+                frame_total = m_imageProvider.Get_Statistic_Total_Buffer_Count();
+                frame_underrun = m_imageProvider.Get_Statistic_feature("Statistic_Buffer_Underrun_Count");
+                frame_error = frame_underrun + m_imageProvider.Get_Statistic_feature("Statistic_Failed_Buffer_Count");
+                //frame_dropped = m_imageProvider.Get_Statistic_feature("Statistic_Total_Packet_Count");
+            }
+            // AVT
+            if (cam_maker == Camera_Maker.AVT)
+            {
+                try
+                {
+                    dFramerate = StatFrameRate(); //AVT
+                    dExpo = ExposureTimeAbs();
                 }
                 catch
                 {
-                    Console.WriteLine("Failed to create file in current folder. Please check permissions.");
-                    Console.WriteLine("Press enter to exit...");
-                    Console.ReadLine();
-                    return;// -1;
+                    MessageBox.Show("error1");
                 }
-
-                // Retrieve singleton reference to system object
-                ManagedSystem system = new ManagedSystem();
-
-                // Print out current library version
-                LibraryVersion spinVersion = system.GetLibraryVersion();
-                Console.WriteLine(
-                    "Spinnaker library version: {0}.{1}.{2}.{3}\n\n",
-                    spinVersion.major,
-                    spinVersion.minor,
-                    spinVersion.type,
-                    spinVersion.build);
-
-                // Retrieve list of cameras from the system
-                ManagedCameraList camList = system.GetCameras();
-
-                Console.WriteLine("Number of cameras detected: {0}\n\n", camList.Count);
-
-                // Finish if there are no cameras
-                if (camList.Count == 0)
-                {
-                    // Clear camera list before releasing system
-                    camList.Clear();
-
-                    // Release system
-                    system.Dispose();
-
-                    Console.WriteLine("Not enough cameras!");
-                    Console.WriteLine("Done! Press Enter to exit...");
-                    Console.ReadLine();
-
-                    return;// -1;
-                }
-
-                //
-                // Run example on each camera
-                //
-                // *** NOTES ***
-                // Cameras can either be retrieved as their own IManagedCamera
-                // objects or from camera lists using the [] operator and an index.
-                //
-                // Using-statements help ensure that cameras are disposed of when
-                // they are no longer needed; otherwise, cameras can be disposed of
-                // manually by calling Dispose(). In C#, if cameras are not disposed
-                // of before the system is released, the system will do so
-                // automatically.
-                //
-                int index = 0;
-
-                foreach (IManagedCamera managedCamera in camList) using (managedCamera)
-                    {
-                        Console.WriteLine("Running example for camera {0}...", index);
-
-                        try
-                        {
-                            // Run example
-                            result = result | RunSingleCamera(managedCamera);
-                        }
-                        catch (SpinnakerException ex)
-                        {
-                            Console.WriteLine("Error: {0}", ex.Message);
-                            result = -1;
-                        }
-
-                        Console.WriteLine("Camera {0} example complete...\n", index++);
-                    }
-
-                // Clear camera list before releasing system
-                camList.Clear();
-
-                // Release system
-                system.Dispose();
-
-                Console.WriteLine("\nDone! Press Enter to exit...");
-                Console.ReadLine();
-
-                return; // result;
+                igain = GainRaw();
+                frame_total = StatFrameDelivered();
+                frame_underrun = StatFrameUnderrun();// AVT
+                frame_shoved = StatFrameShoved();
+                frame_dropped = StatFrameDropped();
+                frame_error = frame_underrun + frame_dropped;
             }
-        } 
-    
+            toolStripStatusLabelFramerate.Text = "Fps: " + dFramerate.ToString("000.0") + " " + reqFramerate.ToString("000.0");
+            toolStripStatusLabelExposure.Text = "Expo: " + (dExpo / 1000.0).ToString("00.00") + "[ms]";
+            toolStripStatusLabelGain.Text = "Gain: " + igain.ToString("000");
+            toolStripStatusLabelFailed.Text = "Failed U:" + frame_underrun.ToString("0000") + " S:" + frame_shoved.ToString("0000") + " D:" + frame_dropped.ToString("0000");
 
-        private void Button3_Click(object sender, EventArgs e)
-        {
-            // 画像の読み込み
-            using (Mat mat = new Mat(@"C:\Users\root\Pictures\MT3Color_aliment.jpg"))
-            // 画像の切り抜き
-            using (Mat mat2 = mat.Clone(new Rect(934, 138, 200, 150)))
-            // 検索対象の画像とテンプレート画像
-            //using (Mat mat = new Mat(@"D:\cs_source\img\neko.jpg"))
-            using (Mat temp = new Mat(@"output.jpg"))
-            using (Mat result = new Mat())
+            //label_frame_rate.Text = pgr_BusSpeed().ToString();
+
+            //double err_rate = 100.0 * (frame_total / (double)id);
+            if (frame_total > 0)
             {
-                Cv2.ImWrite(@"output.jpg", mat2);
-                Cv2.ImShow("grayscale_show", mat2);
-
-                // テンプレートマッチ
-                Cv2.MatchTemplate(mat, temp, result, TemplateMatchModes.CCoeffNormed);
-
-                // 類似度が最大/最小となる画素の位置を調べる
-                OpenCvSharp.Point minloc, maxloc;
-                double minval, maxval;
-                Cv2.MinMaxLoc(result, out minval, out maxval, out minloc, out maxloc);
-
-                // しきい値で判断
-                var threshold = 0.9;
-                if (maxval >= threshold)
-                {
-
-                    // 最も見つかった場所に赤枠を表示
-                    Rect rect = new Rect(maxloc.X, maxloc.Y, temp.Width, temp.Height);
-                    Cv2.Rectangle(mat, rect, new OpenCvSharp.Scalar(0, 0, 255), 2);
-
-                    // ウィンドウに画像を表示
-                    Cv2.ImShow("template1_show", mat);
-
-                }
-                else
-                {
-                    // 見つからない
-                    MessageBox.Show("見つかりませんでした");
-                }
-
+                err_rate = 100.0 * (frame_error / (double)frame_total);
             }
+            toolStripStatusLabelID.Text = "Frames: " + frame_total.ToString("0000") + " " + frame_error.ToString("0000") + " " + err_rate.ToString("00.00");// +"TS:" + timestamp;
 
+            if (this.States == SAVE)
+            {
+                this.buttonSave.BackColor = Color.Red;
+                this.buttonSave.Enabled = false;
+                this.ButtonSaveEnd.Enabled = true;
+            }
+            if (this.States == RUN)
+            {
+                this.buttonSave.BackColor = Color.FromKnownColor(KnownColor.Control);
+                this.buttonSave.Enabled = true;
+                this.ButtonSaveEnd.Enabled = false;
+                this.ObsStart.BackColor = Color.Red;
+                if (!checkBoxObsAuto.Checked)
+                {
+                    this.ObsStart.Enabled = false;
+                    this.ObsEndButton.Enabled = true;
+                }
+            }
+            if (this.States == STOP)
+            {
+                this.buttonSave.BackColor = Color.FromKnownColor(KnownColor.Control);
+                this.buttonSave.Enabled = false;
+                this.ButtonSaveEnd.Enabled = false;
+                this.ObsStart.BackColor = Color.FromKnownColor(KnownColor.Control);
+                this.ObsStart.Enabled = true;
+                this.ObsEndButton.Enabled = false;
+            }
+        }
+
+        /// <summary>
+        /// FIFO pushルーチン
+        /// imgdata.img　は　すでにセット済み
+        /// </summary>
+        private void imgdata_push_FIFO()
+        {
+            // 文字入れ
+            //String str = String.Format("ID:{0,6:D1} ", imgdata.id) + imgdata.t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F1})", gx, gy, max_val);
+            //img_dmk.PutText(str, new CvPoint(10, 460), font, new CvColor(255, 100, 100));
+
+            //try
+            //{
+            //Cv.Sub(img_dmk, img_dark8, imgdata.img); // dark減算
+            //Cv.Copy(img_dmk, imgdata.img);
+            // cam.Information.GetImageInfo(s32MemID, out imageInfo);
+            imgdata.id = (int)frame_id;     // (int)imageInfo.FrameNumber;
+            imgdata.t = DateTime.Now; //imageInfo.TimestampSystem;   //  LiveStartTime.AddSeconds(CurrentBuffer.SampleEndTime);
+            imgdata.ImgSaveFlag = !(ImgSaveFlag != 0); //int->bool変換
+            //statusRet = cam.Timing.Exposure.Get(out exp);
+            imgdata.gx = gx;
+            imgdata.gy = gy;
+            imgdata.kgx = kgx;
+            imgdata.kgy = kgy;
+            imgdata.kvx = kvx;
+            imgdata.kvy = kvy;
+            imgdata.vmax = max_val;
+            imgdata.blobs = blobs;
+            imgdata.udpkv1 = (Udp_kv)udpkv.Clone();
+            imgdata.az = az;
+            imgdata.alt = alt;
+            imgdata.vaz = vaz;
+            imgdata.valt = valt;
+            if (fifo.Count == appSettings.FifoMaxFrame - 1) fifo.EraseLast();
+            fifo.InsertFirst(imgdata);
+            /*}
+            catch (Exception ex)
+            {
+                //匿名デリゲートで表示する
+                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                System.Diagnostics.Trace.WriteLine(ex.Message);
+            }*/
+            if (frame_id % 4 == 0) // mabiki
+            {
+                Cv.RunningAvg(imgdata.img, imgAvg, 0.05); // 6ms
+            }
+        }
+
+
+        /// <summary>
+        /// HDDの空き領域を求めます
+        /// </summary>
+        /// <remarks>
+        /// HDD free space
+        /// </remarks>
+        private long GetTotalFreeSpace(string driveName)
+        {
+            foreach (System.IO.DriveInfo drive in System.IO.DriveInfo.GetDrives())
+            {
+                if (drive.IsReady && drive.Name == driveName)
+                {
+                    return drive.TotalFreeSpace;
+                }
+            }
+            return -1;
+        }
+        /// <summary>
+        /// MTmon status 送信ルーチン
+        /// </summary>
+        /// <remarks>
+        /// MTmon status send
+        /// </remarks>
+        private void MTmon_Data_Send(object sender)
+        {
+            // MTmon status for UDP
+            //データを送信するリモートホストとポート番号
+            string remoteHost = mmFsiCore_i5;
+            int remotePort = mmFsiUdpPortMTmonitor;
+            //送信するデータを読み込む
+            mtmon_data.id = (byte)appSettings.MtMon_ID;
+            mtmon_data.diskspace = (int)(diskspace / (1024 * 1024 * 1024));
+            if (frame_id == id_mon)
+            {
+                mtmon_data.obs = (byte)STOP;
+            }
+            else
+            {
+                mtmon_data.obs = (byte)this.States;
+            }
+            id_mon = frame_id;
+            //mtmon_data.obs = this.States ; 
+            byte[] sendBytes = ToBytes(mtmon_data);
+
+            try
+            {
+                //リモートホストを指定してデータを送信する
+                udpc3.Send(sendBytes, sendBytes.Length, remoteHost, remotePort);
+            }
+            catch (Exception ex)
+            {
+                //匿名デリゲートで表示する
+                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+            }
+        }
+        static byte[] ToBytes(MT_MONITOR_DATA obj)
+        {
+            int size = Marshal.SizeOf(typeof(MT_MONITOR_DATA));
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(obj, ptr, false);
+            byte[] bytes = new byte[size];
+            Marshal.Copy(ptr, bytes, 0, size);
+            Marshal.FreeHGlobal(ptr);
+            return bytes;
+        }
+
+
+        private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
+        {
+            string s = string.Format("(x,y)=({0},{1})\n", e.X, e.Y);
+            this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, s });
+        }
+
+        private void flowLayoutPanel1_Paint(object sender, PaintEventArgs e)
+        {
 
         }
 
-        private void Button4_Click(object sender, EventArgs e)
+        private void buttonMove_Click(object sender, EventArgs e)
         {
-            //PointGreyCamera pg = new PointGreyCamera();
-            string[] weekDays = new string[] { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
-                        
-            PointGreyCamera.initPGRcamera(weekDays);
+
+            buttonMove.Enabled = false;
+
+            star_auto_check();
+
+            buttonMove.Enabled = true;
+        }
+
+        private void timer_thingspeak_Tick(object sender, EventArgs e)
+        {
+            string s = string.Format("{0} {1}", 2, frame_id); // 2:FishEye2
+            //コマンドライン引数に「"C:\test\1.txt"」を指定してメモ帳を起動する
+         //   System.Diagnostics.Process.Start(@"""C:\tool\bin\thingspeak_send_frame_id_cs.exe""", s);
+        }
+
+        private void numericUpDownStarMin_ValueChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBoxDispAvg_CheckedChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }
+

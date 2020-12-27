@@ -7,7 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
-namespace MT3
+namespace AFPv2
 {
     // C++ 構造体のマーシャリング
     [StructLayout(LayoutKind.Sequential)]

@@ -10,11 +10,12 @@ using System.IO;
 using System.Threading.Tasks;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
-using PylonC.NETSupportLibrary;
-using uEye;
+using NLog;
+//using PylonC.NETSupportLibrary;
+//using uEye;
 using MtLibrary2;
 
-namespace MT3
+namespace AFPv2
 {
     #region 定義
     public enum Camera_Maker
@@ -72,8 +73,19 @@ namespace MT3
 
     public partial class Form1 : Form
     {
+        // NLog
+        private static Logger Logger = LogManager.GetCurrentClassLogger();
+        public static void NLogInfo(string message)
+        {
+            Logger.Info(message);
+        }
+        public static void NLogFatal(string message)
+        {
+            Logger.Fatal(message);
+        }
+
         #region 定数
-        
+
         Camera_Maker cam_maker = Camera_Maker.Basler ;
         Camera_Color cam_color = Camera_Color.mono;
 
@@ -149,43 +161,34 @@ namespace MT3
         ImageData imgdata = new ImageData(640,480); //struck 初期化ダミー
         CircularBuffer fifo = new CircularBuffer();
 
-        private ImageProvider m_imageProvider = new ImageProvider(); /* Create one image provider. */
-        TIS.Imaging.ImageBuffer CurrentBuffer = null;
-
-        // IDS
-        private Int32 u32DisplayID = 0;
-        uEye.Camera cam;
-        uEye.Defines.Status statusRet = 0;
-        uEye.Types.ImageInfo imageInfo;
-        ulong ueye_frame_number = 0;
-        Int32 s32MemID;
 
         double set_exposure  = 3;   // [ms]            F1.8:F4  exp 8ms:3ms  gain 1024: 100  約106倍
         double set_exposure1 = 0.2; // [ms]
  
-        IplImage img_dmk3, img_dmk, img2, imgLabel , imgAvg, img_ueye_aoi, img_mask, img_mask2, img_dark8;
+        Mat img_dmk3, img_dmk, img2 , imgAvg, img_ueye_aoi, img_mask, img_mask2, img_dark8;
+        //Mat imgLabel;
         CvBlobs blobs = new CvBlobs();
-        CvFont font = new CvFont(FontFace.HersheyComplex, 0.50, 0.50);
-        CvFont font_big = new CvFont(FontFace.HersheyComplex, 1.0, 1.0);
-        CvWindow cvwin = new CvWindow("AVR Win");
-        CvWindow cvwin2 = new CvWindow("StarMask Win");
+        //Font font = new CvFont(FontFace.HersheyComplex, 0.50, 0.50);
+        //Font font_big = new CvFont(FontFace.HersheyComplex, 1.0, 1.0);
+        //Window cvwin = new CvWindow("AVR Win");
+        //Window cvwin2 = new CvWindow("StarMask Win");
 
         int star_adaptive_threshold = 8;
         double gx, gy, max_val, kgx, kgy, kvx, kvy, sgx, sgy;
-        CvPoint2D64f max_centroid;
+        Point2d max_centroid;
         int max_label;
         CvBlob maxBlob;
-        CvRect blob_rect;
-        CvKalman kalman = Cv.CreateKalman(4, 2);
+        Rect blob_rect;
+        KalmanFilter kalman = new KalmanFilter(4, 2);// Cv.CreateKalman(4, 2);
         int kalman_id = 0;
         // 観測値(kalman)
-        CvMat measurement = new CvMat(2, 1, MatrixType.F32C1);
-        CvMat correction;
-        CvMat prediction;
+        Mat measurement = new Mat(2, 1, MatType.CV_32FC1);// .F32C1);
+        Mat correction;
+        Mat prediction;
 
         // 位置補正データ
-        CvMat grid_az = new CvMat(360, 90, MatrixType.F64C1);
-        CvMat grid_alt = new CvMat(360, 90, MatrixType.F64C1);
+        Mat grid_az  = new Mat(360, 90, MatType.CV_64FC1);
+        Mat grid_alt = new Mat(360, 90, MatType.CV_64FC1);
         //frame rate 用
         Stopwatch sw_fr = new Stopwatch();
         long elapsed_fr0 = 0, elapsed_fr1 = 0;
@@ -229,7 +232,14 @@ namespace MT3
 
         #endregion
 
-        public void IplImageInit()
+        //BCB互換TDatetime値に変換
+        private double TDateTimeDouble(DateTime t)
+        {
+            TimeSpan ts = t - TBASE;   // BCB 1899/12/30 0:0:0 からの経過日数
+            return (ts.TotalDays);
+        }
+
+        public void iplimageInit()
         {
             int wi = appSettings.Width;
             int he = appSettings.Height;
@@ -244,21 +254,21 @@ namespace MT3
                 he = appSettings.uEye_AOI_h;
             }
                 
-            img_dmk3 = new IplImage(wi, he, BitDepth.U8, 3);
-            img_dmk  = new IplImage(wi, he, BitDepth.U8, 1);
-            img_mask = new IplImage(wi, he, BitDepth.U8, 1);
-            img_ueye_aoi = new IplImage(appSettings.Width, he, BitDepth.U8, 1);
+            img_dmk3 = new Mat(wi, he, MatType.CV_8U, 3);
+            img_dmk  = new Mat(wi, he, MatType.CV_8U, 1);
+            img_mask = new Mat(wi, he, MatType.CV_8U, 1);
+            img_ueye_aoi = new Mat(appSettings.Width, he, MatType.CV_8U, 1);
             string filePath = @"dark00.png";// CVM4000用　固定パタンノイズが大きいため
             if (File.Exists(filePath))
             {
-                img_dark8 = Cv.LoadImage(filePath, LoadMode.GrayScale);
+                img_dark8 = Cv2.ImRead(filePath, ImreadModes.Grayscale);
             }
 
-            img2 = new IplImage(wi, he, BitDepth.U8, 1);
-            imgLabel = new IplImage(wi, he, CvBlobLib.DepthLabel, 1);
+            img2 = new Mat(wi, he, MatType.CV_8U, 1);
+            //imgLabel  = new Mat(wi, he, CvBlobLib.DepthLabel, 1);
             
-            imgAvg   = new IplImage(wi, he, BitDepth.F32, 1);
-            img_mask2 = new IplImage(wi, he, BitDepth.U8, 1);
+            imgAvg    = new Mat(wi, he, MatType.CV_32F, 1);
+            img_mask2 = new Mat(wi, he, MatType.CV_8U, 1);
 
             imgdata.init(wi, he);
             // FIFO init
@@ -836,6 +846,7 @@ namespace MT3
         #endregion
 
         # region AVT
+        /*
         //AVT
         //GE680CCamera cam = new GE680CCamera(1);
         AVT.VmbAPINET.Vimba sys = new AVT.VmbAPINET.Vimba();
@@ -944,19 +955,19 @@ namespace MT3
 
         private void OnFrameReceived(AVT.VmbAPINET.Frame frame)
         {
- /*           try
-            {
-                if (InvokeRequired) // if not from this thread invoke it in our context
-                {
-                    Invoke(new AVT.VmbAPINET.Camera.OnFrameReceivedHandler(OnFrameReceived), frame);
-                    return;
-                }
-            }
-            catch (ObjectDisposedException e)
-            {
-                Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, e.Message });
-            }
-*/
+ //           try
+ //           {
+ //               if (InvokeRequired) // if not from this thread invoke it in our context
+ //               {
+ //                   Invoke(new AVT.VmbAPINET.Camera.OnFrameReceivedHandler(OnFrameReceived), frame);
+ //                   return;
+ //               }
+ //           }
+ //           catch (ObjectDisposedException e)
+ //           {
+ //               Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, e.Message });
+ //           }
+//
             // 処理速度
             double sf = (double)Stopwatch.Frequency / 1000; //msec
             lap21 = (1 - alpha) * lap21 + alpha * (sw2.ElapsedTicks - elapsed20) / sf;
@@ -1090,13 +1101,14 @@ namespace MT3
             }
         }
         private AVT.VmbAPINET.Feature m_AcquisitionFrameCountFeature = null;
-
+*/
         #endregion
+
 
         #region Public methods.
 
         #region Category /AcquisitionControl
-
+/*
         public void AcquisitionAbort()
         {
             AcquisitionAbortFeature.RunCommand();
@@ -1211,11 +1223,11 @@ namespace MT3
         private AVT.VmbAPINET.Feature m_GVSPAdjustPacketSizeFeature = null;
 
         #endregion
-
+*/
         #endregion
 
         #region Enum declarations.
-
+/*
         public enum AcquisitionModeEnum
         {
             Continuous = 1,
@@ -1255,7 +1267,7 @@ namespace MT3
             UserSet4 = 4,
             UserSet5 = 5
         }
-
+*/
         #endregion
 
         #region common FIFO UDP
@@ -1311,7 +1323,9 @@ namespace MT3
             catch (Exception ex)
             {
                 //匿名デリゲートで表示する
-                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                NLogFatal(ex.ToString());
+                Console.WriteLine(ex.ToString());
             }
         }
         // PID data送信ルーチン
@@ -1346,7 +1360,9 @@ namespace MT3
             catch (Exception ex)
             {
                 //匿名デリゲートで表示する
-                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                NLogFatal(ex.ToString());
+                Console.WriteLine(ex.ToString());
             }
         }
         /// <summary>
@@ -1380,7 +1396,9 @@ namespace MT3
             catch (Exception ex)
             {
                 //匿名デリゲートで表示する
-                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                NLogFatal(ex.ToString());
+                Console.WriteLine(ex.ToString());
             }
         }
 
@@ -1442,7 +1460,9 @@ namespace MT3
             catch (Exception ex)
             {
                 //匿名デリゲートで表示する
-                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                NLogFatal(ex.ToString());
+                Console.WriteLine(ex.ToString());
             }
         }
         /// <summary>
@@ -1548,8 +1568,8 @@ namespace MT3
                 }
                 star_azalt.RemoveAt(ii);
 
-                double daz_grid = (double)numericUpDown_daz.Value / 10.0 - grid_az.Get2D((int)az_t, (int)alt_t);
-                double dalt_grid = (double)numericUpDown_dalt.Value / 10.0 - grid_alt.Get2D((int)az_t, (int)alt_t);
+                double daz_grid  = (double)numericUpDown_daz.Value  / 10.0 - grid_az.At<double>((int)az_t, (int)alt_t);
+                double dalt_grid = (double)numericUpDown_dalt.Value / 10.0 - grid_alt.At<double>((int)az_t, (int)alt_t);
 
                 // KV1000通信  MT2,3 move
                 if (appSettings.ID == 10) // MT2 WideCam 設定
@@ -1610,7 +1630,7 @@ namespace MT3
                         foreach (string s in stArrayData)
                         {
                             double data = double.Parse(s);
-                            grid_az.Set2D(j, i, data);
+                            grid_az.Set(j, i, data);
                             i++;
                         }
                         j++;
@@ -1629,7 +1649,7 @@ namespace MT3
                         foreach (string s in stArrayData)
                         {
                             double data = double.Parse(s);
-                            grid_alt.Set2D(j, i, data);
+                            grid_alt.Set(j, i, data);
                             i++;
                         }
                         j++;
@@ -1682,6 +1702,76 @@ namespace MT3
                 w.Write("{11} {0,7:F3} {1,7:F3} {2,7:F3} {3,7:F3} {4,5:F1} {5,7:F1} {6,7:F3} {7,7:F3} {8,7:F3} {9,7:F3} {10}\r\n", az, alt, daz, dalt, vmag, count,cx, cy, xoa, yoa, name, dt);
             }
         }
+
+        /// <summary>
+        /// HDDの空き領域を求めます
+        /// </summary>
+        /// <remarks>
+        /// HDD free space
+        /// </remarks>
+        private long GetTotalFreeSpace(string driveName)
+        {
+            foreach (System.IO.DriveInfo drive in System.IO.DriveInfo.GetDrives())
+            {
+                if (drive.IsReady && drive.Name == driveName)
+                {
+                    return drive.TotalFreeSpace;
+                }
+            }
+            return -1;
+        }
+        /// <summary>
+        /// MTmon status 送信ルーチン
+        /// </summary>
+        /// <remarks>
+        /// MTmon status send
+        /// </remarks>
+        private void MTmon_Data_Send(object sender)
+        {
+            // MTmon status for UDP
+            //データを送信するリモートホストとポート番号
+            string remoteHost = mmFsiCore_i5;
+            int remotePort = mmFsiUdpPortMTmonitor;
+            //送信するデータを読み込む
+            mtmon_data.id = (byte)appSettings.MtMon_ID;
+            mtmon_data.diskspace = (int)(diskspace / (1024 * 1024 * 1024));
+            if (frame_id == id_mon)
+            {
+                mtmon_data.obs = (byte)STOP;
+            }
+            else
+            {
+                mtmon_data.obs = (byte)this.States;
+            }
+            id_mon = frame_id;
+            //mtmon_data.obs = this.States ; 
+            byte[] sendBytes = ToBytes(mtmon_data);
+
+            try
+            {
+                //リモートホストを指定してデータを送信する
+                udpc3.Send(sendBytes, sendBytes.Length, remoteHost, remotePort);
+            }
+            catch (Exception ex)
+            {
+                //匿名デリゲートで表示する
+                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                NLogFatal(ex.ToString());
+                Console.WriteLine(ex.ToString());
+            }
+        }
+        static byte[] ToBytes(MT_MONITOR_DATA obj)
+        {
+            int size = Marshal.SizeOf(typeof(MT_MONITOR_DATA));
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+            Marshal.StructureToPtr(obj, ptr, false);
+            byte[] bytes = new byte[size];
+            Marshal.Copy(ptr, bytes, 0, size);
+            Marshal.FreeHGlobal(ptr);
+            return bytes;
+        }
+
         #endregion
-    }  
+    }
 }
+#endregion

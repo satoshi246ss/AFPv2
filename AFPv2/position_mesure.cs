@@ -5,11 +5,11 @@ using System.Text;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
 
-namespace MT3
+namespace AFPv2
 {
     class position_mesure
     {
-        CvPoint2D64f pos_pre = new CvPoint2D64f(-1, -1);
+        Point2d pos_pre = new Point2d(-1, -1);
         double distance_pre = 1000;
         double dist_alpha = 0.5;
         double distance0;　//距離定数　評価値が1/eになる距離[pixel]
@@ -30,7 +30,7 @@ namespace MT3
             {
                 return 0;
             }
-            CvPoint2D64f pos_ans = new CvPoint2D64f(-1, -1);
+            Point2d pos_ans = new Point2d(-1, -1);
             CvBlob maxBlob = blobs.LargestBlob();
             int max_label = blobs.GreaterBlob().Label;
             if (blobs.Count == 0) return 0;
@@ -76,13 +76,13 @@ namespace MT3
         /// <param name="maxval">ブロブの面積</param>
         /// <param name="pos_pre">前回の目標位置</param>
         /// <param name="distance0">距離定数</param>
-        public static double Cal_Evaluate(CvPoint2D64f pos, double maxval, CvPoint2D64f pos_pre, double distance0)
+        public static double Cal_Evaluate( Point2d pos, double maxval, Point2d pos_pre, double distance0)
         {
             double distance = Cal_distance(pos, pos_pre);
             double eval = maxval * Math.Exp(-distance / distance0);
             return eval;
         }
-        public static double Cal_distance(CvPoint2D64f pos1, CvPoint2D64f pos2)
+        public static double Cal_distance(Point2d pos1, Point2d pos2)
         {
             return Math.Sqrt(((pos1.X - pos2.X) * (pos1.X - pos2.X) + (pos1.Y - pos2.Y) * (pos1.Y - pos2.Y)));
         }
