@@ -9,18 +9,18 @@ using System.Text;
 using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
-using VideoInputSharp;
+//using VideoInputSharp;
 using System.Diagnostics;
 using System.Threading;
 using System.Net.Sockets;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.IO;
-using PylonC.NETSupportLibrary;
+//using PylonC.NETSupportLibrary;
 //using MtLibrary;
 using MtLibrary2;
 
-namespace MT3
+namespace AFPv2                                                                                                                                                                                                                                                                                                 
 {
     public partial class Form1 : Form
     {
@@ -29,7 +29,7 @@ namespace MT3
 
         public Form1()
         {
-            InitializeComponent();
+            InitializeComponent();             
             timeBeginPeriod(time_period);
 
             //コマンドライン引数を配列で取得する
@@ -48,7 +48,7 @@ namespace MT3
             if (cmds[1].StartsWith("/PG") || cmds[1].StartsWith("/Pg") || cmds[1].StartsWith("/pg") || cmds[1].StartsWith("/pgr")) // PointGreyReserch
             {
                 cam_maker = Camera_Maker.PointGreyCamera;
-                PgrPrintBuildInfo();
+                //PgrPrintBuildInfo();
                 logger.Info("PointGrayCamera start.");
             }
             if (cmds[1].StartsWith("/BA") || cmds[1].StartsWith("/ba") || cmds[1].StartsWith("/Ba")) // Basler
@@ -112,8 +112,7 @@ namespace MT3
             // IDS
             if (cam_maker == Camera_Maker.IDS)
             {
-                u32DisplayID = pictureBox1.Handle.ToInt32();
-                //cam = new uEye.Camera();
+                //u32DisplayID = pictureBox1.Handle.ToInt32();                
                 appTitle = "MT3IDS " + appSettings.ID.ToString();
             }
 
@@ -129,25 +128,14 @@ namespace MT3
                 appTitle = "MT3Basler " + appSettings.ID.ToString();
                 Text = "MT3BaslerAce";
                 /* Register for the events of the image provider needed for proper operation. */
-                m_imageProvider.GrabErrorEvent += new ImageProvider.GrabErrorEventHandler(OnGrabErrorEventCallback);
-                m_imageProvider.DeviceRemovedEvent += new ImageProvider.DeviceRemovedEventHandler(OnDeviceRemovedEventCallback);
-                m_imageProvider.DeviceOpenedEvent += new ImageProvider.DeviceOpenedEventHandler(OnDeviceOpenedEventCallback);
-                m_imageProvider.DeviceClosedEvent += new ImageProvider.DeviceClosedEventHandler(OnDeviceClosedEventCallback);
-                m_imageProvider.GrabbingStartedEvent += new ImageProvider.GrabbingStartedEventHandler(OnGrabbingStartedEventCallback);
-                m_imageProvider.ImageReadyEvent += new ImageProvider.ImageReadyEventHandler(OnImageReadyEventCallback);
-                m_imageProvider.GrabbingStoppedEvent += new ImageProvider.GrabbingStoppedEventHandler(OnGrabbingStoppedEventCallback);
-
-                /* Provide the controls in the lower left area with the image provider object. */
-                //     sliderExposureTime.MyImageProvider = m_imageProvider;
-
-                /*    sliderGain.MyImageProvider = m_imageProvider;
-                    sliderExposureTime.MyImageProvider = m_imageProvider;
-                    sliderHeight.MyImageProvider = m_imageProvider;
-                    sliderWidth.MyImageProvider = m_imageProvider;
-                    comboBoxTestImage.MyImageProvider = m_imageProvider;
-                    comboBoxPixelFormat.MyImageProvider = m_imageProvider;
-                */
-
+                //m_imageProvider.GrabErrorEvent += new ImageProvider.GrabErrorEventHandler(OnGrabErrorEventCallback);
+                //m_imageProvider.DeviceRemovedEvent += new ImageProvider.DeviceRemovedEventHandler(OnDeviceRemovedEventCallback);
+                //m_imageProvider.DeviceOpenedEvent += new ImageProvider.DeviceOpenedEventHandler(OnDeviceOpenedEventCallback);
+                //m_imageProvider.DeviceClosedEvent += new ImageProvider.DeviceClosedEventHandler(OnDeviceClosedEventCallback);
+                //m_imageProvider.GrabbingStartedEvent += new ImageProvider.GrabbingStartedEventHandler(OnGrabbingStartedEventCallback);
+                //m_imageProvider.ImageReadyEvent += new ImageProvider.ImageReadyEventHandler(OnImageReadyEventCallback);
+                //m_imageProvider.GrabbingStoppedEvent += new ImageProvider.GrabbingStoppedEventHandler(OnGrabbingStoppedEventCallback);
+ 
                 /* Update the list of available devices in the upper left area. */
                 //UpdateDeviceList();
             }
@@ -161,28 +149,14 @@ namespace MT3
 
             appTitle = "MT3" + appSettings.Text + " " + appSettings.ID.ToString() + "  " + mmLocalHost + "(" + mmLocalIP + ")";
             this.Text = appTitle;
-
-            // 有効な画像取り込みデバイスが選択されているかをチェック。
-            /*  if (!icImagingControl1.DeviceValid)
-              {
-                  icImagingControl1.ShowDeviceSettingsDialog();
-
-                  if (!icImagingControl1.DeviceValid)
-                  {
-                      MessageBox.Show("No device was selected.", "Display Buffer",
-                                      MessageBoxButtons.OK, MessageBoxIcon.Information);
-                      this.Close();
-                      return;
-                  }
-              } */
-
         }
+
         //Form起動後１回だけ発生
         private void Form1_Shown(object sender, EventArgs e)
         {
             checkBoxObsAuto_CheckedChanged(sender, e);
             diskspace = cDrive.TotalFreeSpace;
-            timerMTmonSend.Start();
+            timerMTmonSend .Start();
 
             starttime = Planet.ObsStartTime(DateTime.Now) - DateTime.Today;
             endtime = Planet.ObsEndTime(DateTime.Now) - DateTime.Today;
@@ -207,12 +181,12 @@ namespace MT3
             //AVT
             if (cam_maker == Camera_Maker.AVT)
             {
-                avt_cam_end();
+                //avt_cam_end();
             }
             //Basler
             if (cam_maker == Camera_Maker.Basler)
             {
-                BaslerEnd();
+                //BaslerEnd();
             }
 
             timeEndPeriod(16);
@@ -427,133 +401,22 @@ namespace MT3
 
         #endregion
 
-        #region アナログキャプチャー
-        // 別スレッド処理（キャプチャー）
-        private void worker_DoWork(object sender, DoWorkEventArgs e)
-        {
-            BackgroundWorker bw = (BackgroundWorker)sender;
-            Stopwatch sw = new Stopwatch();
-            string str;
-            //id = 0;
-
-            //videoInputオブジェクト
-            int DeviceID = appSettings.CameraID; // 基本は、0　 // 3 (pro), 4(piccolo)  7(DMK)
-            int CaptureFps = (int)appSettings.Framerate;  // 30
-            int interval = (int)(1000 / CaptureFps / 10);
-
-            using (VideoInput vi = new VideoInput())
-            {
-                vi.SetIdealFramerate(DeviceID, CaptureFps);
-                vi.SetupDevice(DeviceID, appSettings.Width, appSettings.Height);
-
-                int width = vi.GetWidth(DeviceID);
-                int height = vi.GetHeight(DeviceID);
-
-                using (IplImage img = new IplImage(width, height, BitDepth.U8, 3))
-                //using (IplImage img_mono = new IplImage(width, height, BitDepth.U8, 1))
-                {
-                    long elapsed0 = 0, elapsed1 = 0;
-                    double framerate0 = 0, framerate1 = 0;
-                    double alfa_fr = 0.999;
-                    sw.Start();
-                    while (bw.CancellationPending == false)
-                    {
-                        if (vi.IsFrameNew(DeviceID))
-                        {
-                            DateTime dn = DateTime.Now; //取得時刻
-                            vi.GetPixels(DeviceID, img.ImageData, false, true);
-                            bw.ReportProgress(0, img);
-
-                            // 処理速度
-                            elapsed0 = sw.ElapsedTicks - elapsed1; // 1frameのticks
-                            elapsed1 = sw.ElapsedTicks;
-                            framerate0 = alfa_fr * framerate1 + (1 - alfa_fr) * (Stopwatch.Frequency / (double)elapsed0);
-                            framerate1 = framerate0;
-                            dFramerate = framerate0;
-
-                            str = String.Format("[{0,0:000}ms]", 1000 * elapsed0 / Stopwatch.Frequency);
-                            //匿名デリゲートで現在の時間をラベルに表示する
-                            this.Invoke(new dlgSetString(ShowLabelText), new object[] { label_frame_rate, str });
-                        }
-                        Application.DoEvents();
-                        Thread.Sleep(interval);
-                    }
-                    this.States = STOP;
-                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsStart, this.States });
-                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsEndButton, this.States });
-                    vi.StopDevice(DeviceID);
-                }
-            }
-        }
-        //
-        // アナログ画像保存
-        //
-        private void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
-        {
-            IplImage image = (IplImage)e.UserState;
-            Cv.Split(image, imgdata.img, null, null, null);
-
-            // 表示画像反転 実装場所　要検討
-            if (appSettings.FlipOn)
-            {
-                if (appSettings.Flipmode == OpenCvSharp.FlipMode.X || appSettings.Flipmode == OpenCvSharp.FlipMode.Y)
-                {
-                    Cv.Flip(imgdata.img, imgdata.img, appSettings.Flipmode);
-                }
-            }
-
-            // MT2 CCD Hot pixel (2015/5/16)
-            ccd_defect_correct(452, 272);
-            ccd_defect_correct(396, 330);
-            ccd_defect_correct(397, 330);
-            ccd_defect_correct(398, 330);
-            ccd_defect_correct(293, 433);
-            ccd_defect_correct(292, 433);
-            ccd_defect_correct(169, 408);
-            ccd_defect_correct(107, 303);
-            ccd_defect_correct(52, 320);
-            ccd_defect_correct(53, 320);
-            ccd_defect_correct(26, 340);
-            ccd_defect_correct(27, 191);
-            ccd_defect_correct(28, 191);
-            ccd_defect_correct(553, 243);
-            ccd_defect_correct(554, 243);
-            ccd_defect_correct(555, 243);
-            ccd_defect_correct(556, 243);
-            ccd_defect_correct(624, 252);
-            ccd_defect_correct(220, 41);
-
-            ++frame_id;
-            detect();
-            imgdata_push_FIFO();
-
-            if (checkBoxDispAvg.Checked == true)
-            {
-                Cv.RunningAvg(imgdata.img, imgAvg, 0.1);
-                //Cv.ShowImage("Video", imgAvg);
-            }
-        }
+        #region function
 
         public void ccd_defect_correct(int x, int y)
         {
-            CvScalar v1;
-            v1 = Cv.Get2D(imgdata.img, y - 3, x);
-            Cv.Set2D(imgdata.img, y - 1, x, v1);
-            v1 = Cv.Get2D(imgdata.img, y - 2, x);
-            Cv.Set2D(imgdata.img, y, x, v1);
-            v1 = Cv.Get2D(imgdata.img, y + 3, x);
-            Cv.Set2D(imgdata.img, y + 1, x, v1);
+            Scalar v1;
+            //v1 = imgdata.img.At< byte > ( y - 3, x ); // mono8:byte  mono16:ushort
+            v1 = imgdata.img.Get<byte>(y - 3, x);
+            imgdata.img.Set(y - 1, x, v1);
+            v1 = imgdata.img.Get<byte>(y - 2, x);
+            imgdata.img.Set(y, x, v1);
+            v1 = imgdata.img.Get<byte>(y + 3, x);
+            imgdata.img.Set(y + 1, x, v1);
 
             //v1.Val0 = 256;
             //Cv.Set2D(imgdata.img, y+1, x, v1);
 
-        }
-
-        //BCB互換TDatetime値に変換
-        private double TDateTimeDouble(DateTime t)
-        {
-            TimeSpan ts = t - TBASE;   // BCB 1899/12/30 0:0:0 からの経過日数
-            return (ts.TotalDays);
         }
 
         //現在の時刻の表示と、タイマーの表示に使用されるデリゲート
@@ -648,7 +511,8 @@ namespace MT3
 
         private void ShowButton_Click(object sender, EventArgs e)
         {
-            uEye_PostSave_settings();
+            Pid_Data_Send_KV1000_SpCam2((short)frame_id, daz, dalt, 1);
+            //uEye_PostSave_settings();
             /*
              Pid_Data_Send_KV1000_SpCam2((short)frame_id, daz, dalt, 1);
 
@@ -714,13 +578,13 @@ namespace MT3
             //AVT
             if (cam_maker == Camera_Maker.AVT)
             {
-                avt_cam_end();
+                //avt_cam_end();
             }
             //Basler
             if (cam_maker == Camera_Maker.Basler)
             {
-                Stop(); /* Stops the grabbing of images. */
-                BaslerEnd();
+                //Stop(); /* Stops the grabbing of images. */
+                //BaslerEnd();
             }
             //PGR
             if (cam_maker == Camera_Maker.PointGreyCamera)
@@ -730,10 +594,10 @@ namespace MT3
             //IDS
             if (cam_maker == Camera_Maker.IDS)
             {
-                if (cam.Acquisition.Stop() == uEye.Defines.Status.SUCCESS)
+                //if (cam.Acquisition.Stop() == uEye.Defines.Status.SUCCESS)
                 {
                 }
-                cam.Exit();
+                //cam.Exit();
             }
             //ImaginSouse
             if (cam_maker == Camera_Maker.ImagingSouce)
@@ -756,13 +620,13 @@ namespace MT3
             //AVT
             if (cam_maker == Camera_Maker.AVT)
             {
-                avt_cam_start();
+                //avt_cam_start();
             }
             // Basler
             if (cam_maker == Camera_Maker.Basler)
             {
-                BaslerStart(0);   /* 0: Get a handle for the first device found.  */
-                ContinuousShot(); /* Start the grabbing of images until grabbing is stopped. */
+                //BaslerStart(0);   /* 0: Get a handle for the first device found.  */
+                //ContinuousShot(); /* Start the grabbing of images until grabbing is stopped. */
             }
             //PGR
             if (cam_maker == Camera_Maker.PointGreyCamera)
@@ -772,14 +636,14 @@ namespace MT3
             //IDS
             if (cam_maker == Camera_Maker.IDS)
             {
-                OpenIDScamera();
-                statusRet = cam.Acquisition.Capture();
-                if (statusRet != uEye.Defines.Status.SUCCESS)
+                //OpenIDScamera();
+                //statusRet = cam.Acquisition.Capture();
+                //if (statusRet != uEye.Defines.Status.SUCCESS)
                 {
                     string s = "Start Live Video failed. IDS cam.";
                     richTextBox1.AppendText(s);
                     logger.Info(s);
-                    cam.Exit();
+                    //cam.Exit();
                     return;
                 }
             }
@@ -853,7 +717,7 @@ namespace MT3
             if (pgr_post_save)
             {
                 pgr_Normal_settings();
-                uEye_Normal_settings();
+                //uEye_Normal_settings();
                 pgr_post_save = false;
             }
             ButtonSaveEnd_Click(sender, e);
@@ -870,7 +734,7 @@ namespace MT3
                 if (!pgr_post_save)
                 {
                     pgr_PostSave_settings();
-                    uEye_PostSave_settings();
+                    //uEye_PostSave_settings();
                     timerSavePost.Start();
                     pgr_post_save = true;
                     return;
@@ -887,7 +751,7 @@ namespace MT3
             timerSaveTimeOver.Stop();
             timerSavePost.Stop();
             pgr_Normal_settings();
-            uEye_Normal_settings();
+            //uEye_Normal_settings();
             pgr_post_save = false;
             ButtonSaveEnd_Click(sender, e);
         }
@@ -946,12 +810,12 @@ namespace MT3
             //　PGR ポスト処理不具合暫定対応用
             if (States == RUN && appSettings.PostSaveProcess)
             {
-                if (!check_uEye_normal_mode()) uEye_Normal_settings();
+                i//f (!check_uEye_normal_mode()) uEye_Normal_settings();
 
                 if (pgr_post_save == true && !timerSavePost.Enabled)
                 {
                     pgr_Normal_settings();
-                    uEye_Normal_settings();
+                    //uEye_Normal_settings();
                     pgr_post_save = false;
                 }
                /* else if (dFramerate < 2.0 && !timerSavePost.Enabled)
@@ -967,7 +831,7 @@ namespace MT3
             // IDS
             if (cam_maker == Camera_Maker.IDS)
             {
-                cam.Gain.Hardware.Boost.SetEnable(checkBoxDispAvg.Checked);
+                //cam.Gain.Hardware.Boost.SetEnable(checkBoxDispAvg.Checked);
             }
         }
 
@@ -1034,10 +898,10 @@ namespace MT3
         /// OUT:目標座標 CvPoint2D64f
         /// </summary>
         /// <param name="capacity">画像表示用回転座標計算ルーチン</param>
-        public CvPoint2D64f Rotation(CvPoint2D64f xy, double r, double theta)
+        public Point2d Rotation(Point2d xy, double r, double theta)
         {
             double sinth = 0, costh = r;
-            CvPoint2D64f ans = new CvPoint2D64f();
+            Point2d ans = new Point2d();
 
             if (appSettings.CamPlatform == Platform.MT2 && udpkv.mt2mode == udpkv.mmWest)
             {
@@ -1076,49 +940,49 @@ namespace MT3
                     {
                         // 移動平均画像の表示
                         double scale = 8.0;
-                        Cv.ConvertScale(imgAvg, img_dmk, scale);
-                        //Cv.ConvertScale(fifo.backgroundImageF(), img_dmk, scale);
-                        Cv.CvtColor(img_dmk, img_dmk3, ColorConversion.GrayToBgr);
+                        Cv2.ConvertScaleAbs(imgAvg, img_dmk, scale);
+                        //Cv2.ConvertScaleAbs(fifo.backgroundImageF(), img_dmk, scale);
+                        Cv2.CvtColor(img_dmk, img_dmk3, ColorConversionCodes.GRAY2BGR);
                     }
                     else
                     {
-                        Cv.CvtColor(imgdata.img, img_dmk3, ColorConversion.GrayToBgr);
+                        Cv2.CvtColor(imgdata.img, img_dmk3, ColorConversionCodes.GRAY2BGR);
                     }
                 }
                 else
                 {
-                    Cv.CvtColor(imgdata.img, img_dmk3, ColorConversion.BayerGbToBgr);
+                    Cv2.CvtColor(imgdata.img, img_dmk3, ColorConversionCodes.BayerGB2BGR); //ColorConversion.BayerGbToBgr);
                 }
 
                 double k1 = 1.3333; //4deg 
                 double k2 = 0.3333; //直径1deg
                 double roa = appSettings.Roa;
 
-                CvPoint2D64f OCPoint = new CvPoint2D64f(appSettings.Xoa, appSettings.Yoa);
-                Cv.Circle(img_dmk3, OCPoint, (int)roa, new CvColor(200, 0, 255));
+                OpenCvSharp.Point OCPoint = new OpenCvSharp.Point(appSettings.Xoa, appSettings.Yoa);
+                Cv2.Circle(img_dmk3, OCPoint, (int)roa, new Scalar(200, 0, 255));
 
-                CvPoint2D64f Point1;
-                CvPoint2D64f Point2;
+                OpenCvSharp.Point2d Point1;
+                OpenCvSharp.Point2d Point2;
                 String str;
 
                 if (udpkv.mt2mode == udpkv.mmWest)
                 {
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
-                    Cv.Circle(img_dmk3, Point1, 5, new CvColor(0, 255, 0));       // Arrow
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
+                    Cv2.Circle(img_dmk3, (OpenCvSharp.Point)Point1, 5, new Scalar(0, 255, 0));       // Arrow
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 90);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 90);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 180);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 180);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 270);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 270);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(230, 105, 0));
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(230, 105, 0));
 
                     str = String.Format("ID:{4,7:D1} W: dAz({5,6:F1},{6,6:F1}) dPix({0,6:F1},{1,6:F1})({2,6:F0})({3,0:00}), th:{7,6:F1}", gx, gy, max_val, max_label, frame_id, daz, dalt, theta_c);
                 }
@@ -1126,36 +990,36 @@ namespace MT3
                 {
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
-                    //Cv.Circle(img_dmk3, Point1, 5, new CvColor(0, 255, 0));       // Arrow
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
+                    //Cv.Circle(img_dmk3, Point1, 5, new Scalar(0, 255, 0));       // Arrow
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 90);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 90);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(230, 105, 0));
-                    //Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(230, 105, 0));
+                    //Cv.Line(img_dmk3, Point1, Point2, new Scalar(0, 205, 0));
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 180);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 180);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
-                    Cv.Circle(img_dmk3, Point1, 5, new CvColor(0, 255, 0));       // Arrow
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
+                    Cv2.Circle(img_dmk3, (OpenCvSharp.Point)Point1, 5, new Scalar(0, 255, 0));       // Arrow
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 270);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 270);
-                    Cv.Line(img_dmk3, Point1, Point2, new CvColor(0, 205, 0));
-                    //Cv.Line(img_dmk3, Point1, Point2, new CvColor(230, 105, 0));
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
+                    //Cv.Line(img_dmk3, Point1, Point2, new Scalar(230, 105, 0));
 
                     str = String.Format("ID:{4,7:D1} E: dAz({5,6:F1},{6,6:F1}) dPix({0,6:F1},{1,6:F1})({2,6:F0})({3,0:00}), th:{7,6:F1}", gx, gy, max_val, max_label, frame_id, daz, dalt, theta_c);
 
                 }
                 if (img_dmk3.Width >= 1600)
                 {
-                    img_dmk3.PutText(str, new CvPoint(12, 24), font_big, new CvColor(0, 150, 250));
+                    img_dmk3.PutText(str, new OpenCvSharp.Point(12, 24), font_big, new Scalar(0, 150, 250));
                 } else
                 {
-                    img_dmk3.PutText(str, new CvPoint(6, 12), font, new CvColor(0, 150, 250));
+                    img_dmk3.PutText(str, new OpenCvSharp.Point(6, 12), font, new Scalar(0, 150, 250));
                 }
-                img_dmk3.Circle(new CvPoint((int)Math.Round(gx), (int)Math.Round(gy)), (int)(roa*max_val/1000), new CvColor(0, 100, 255));
-                img_dmk3.Circle(new CvPoint((int)Math.Round(gx), (int)Math.Round(gy)), (int)(10), new CvColor(0, 100, 255));
+                img_dmk3.Circle(new OpenCvSharp.Point((int)Math.Round(gx), (int)Math.Round(gy)), (int)(roa*max_val/1000), new Scalar(0, 100, 255));
+                img_dmk3.Circle(new OpenCvSharp.Point((int)Math.Round(gx), (int)Math.Round(gy)), (int)(10), new Scalar(0, 100, 255));
                 //cvwin.Image = imgAvg;
 
                 // Star display for Fish2
@@ -1163,9 +1027,9 @@ namespace MT3
                 for (int i = 0; i < star.Count; ++i)
                 {
                     get_star_disp_pos(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpx, out cx, out cy, out r_mag);
-                    OCPoint.X = appSettings.Xoa + cx;
-                    OCPoint.Y = appSettings.Yoa + cy;
-                    Cv.Circle(img_dmk3, OCPoint, 2 * r_mag, new CvColor(0, 255, 0));
+                    OCPoint.X = (int)(appSettings.Xoa + cx);
+                    OCPoint.Y = (int)(appSettings.Yoa + cy);
+                    Cv2.Circle(img_dmk3, OCPoint, 2 * r_mag, new Scalar(0, 255, 0));
                 }
 
                 try
@@ -1218,16 +1082,16 @@ namespace MT3
             // IDS
             if (cam_maker == Camera_Maker.IDS)
             {
-                cam.Timing.Framerate.GetCurrentFps(out dFramerate); //IDS
-                statusRet = cam.Timing.Exposure.Get(out dExpo);//[ms]
-                dExpo *= 1000; // [us]
-                int ig;
-                cam.Gain.Hardware.Scaled.GetMaster(out ig);
-                igain = ig;
-                uEye.Types.CaptureStatus captureStatus;
-                cam.Information.GetCaptureStatus(out captureStatus); //IDS ueye
-                frame_error = (long)captureStatus.Total;
-                frame_total = (long)(imageInfo.FrameNumber - ueye_frame_number);
+             //   cam.Timing.Framerate.GetCurrentFps(out dFramerate); //IDS
+             //   statusRet = cam.Timing.Exposure.Get(out dExpo);//[ms]
+             //   dExpo *= 1000; // [us]
+             //   int ig;
+             //   cam.Gain.Hardware.Scaled.GetMaster(out ig);
+             //   igain = ig;
+             //   uEye.Types.CaptureStatus captureStatus;
+             //   cam.Information.GetCaptureStatus(out captureStatus); //IDS ueye
+             //   frame_error = (long)captureStatus.Total;
+             //   frame_total = (long)(imageInfo.FrameNumber - ueye_frame_number);
             }
             // PGR
             if (cam_maker == Camera_Maker.PointGreyCamera)
@@ -1246,33 +1110,33 @@ namespace MT3
             // Basler
             if (cam_maker == Camera_Maker.Basler)
             {
-                dFramerate = m_imageProvider.GetFrameRate(); // Basler
-                dExpo = GetExposureTime();
-                igain = GetGain();
-                frame_timestamp = m_imageProvider.GetTimestamp();
-                frame_total = m_imageProvider.Get_Statistic_Total_Buffer_Count();
-                frame_underrun = m_imageProvider.Get_Statistic_feature("Statistic_Buffer_Underrun_Count");
-                frame_error = frame_underrun + m_imageProvider.Get_Statistic_feature("Statistic_Failed_Buffer_Count");
-                //frame_dropped = m_imageProvider.Get_Statistic_feature("Statistic_Total_Packet_Count");
+             //   dFramerate = m_imageProvider.GetFrameRate(); // Basler
+             //   dExpo = GetExposureTime();
+             //   igain = GetGain();
+             //   frame_timestamp = m_imageProvider.GetTimestamp();
+             //   frame_total = m_imageProvider.Get_Statistic_Total_Buffer_Count();
+             //   frame_underrun = m_imageProvider.Get_Statistic_feature("Statistic_Buffer_Underrun_Count");
+             //   frame_error = frame_underrun + m_imageProvider.Get_Statistic_feature("Statistic_Failed_Buffer_Count");
+             //   //frame_dropped = m_imageProvider.Get_Statistic_feature("Statistic_Total_Packet_Count");
             }
             // AVT
             if (cam_maker == Camera_Maker.AVT)
             {
                 try
                 {
-                    dFramerate = StatFrameRate(); //AVT
-                    dExpo = ExposureTimeAbs();
+             //        dFramerate = StatFrameRate(); //AVT
+             //       dExpo = ExposureTimeAbs();
                 }
                 catch
                 {
                     MessageBox.Show("error1");
                 }
-                igain = GainRaw();
-                frame_total = StatFrameDelivered();
-                frame_underrun = StatFrameUnderrun();// AVT
-                frame_shoved = StatFrameShoved();
-                frame_dropped = StatFrameDropped();
-                frame_error = frame_underrun + frame_dropped;
+             //   igain = GainRaw();
+             //   frame_total = StatFrameDelivered();
+             //   frame_underrun = StatFrameUnderrun();// AVT
+             //   frame_shoved = StatFrameShoved();
+             //   frame_dropped = StatFrameDropped();
+             //   frame_error = frame_underrun + frame_dropped;
             }
             toolStripStatusLabelFramerate.Text = "Fps: " + dFramerate.ToString("000.0") + " " + reqFramerate.ToString("000.0");
             toolStripStatusLabelExposure.Text = "Expo: " + (dExpo / 1000.0).ToString("00.00") + "[ms]";
@@ -1325,7 +1189,7 @@ namespace MT3
         {
             // 文字入れ
             //String str = String.Format("ID:{0,6:D1} ", imgdata.id) + imgdata.t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F1})", gx, gy, max_val);
-            //img_dmk.PutText(str, new CvPoint(10, 460), font, new CvColor(255, 100, 100));
+            //img_dmk.PutText(str, new CvPoint(10, 460), font, new Scalar(255, 100, 100));
 
             //try
             //{
@@ -1358,79 +1222,13 @@ namespace MT3
                 this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
                 System.Diagnostics.Trace.WriteLine(ex.Message);
             }*/
+            double alfa = 0.05;
             if (frame_id % 4 == 0) // mabiki
             {
-                Cv.RunningAvg(imgdata.img, imgAvg, 0.05); // 6ms
+                //Cv2.RunningAvg(imgdata.img, imgAvg, 0.05); // 6ms
+                Cv2.AccumulateWeighted(imgdata.img, imgAvg, alfa, null);
             }
         }
-
-
-        /// <summary>
-        /// HDDの空き領域を求めます
-        /// </summary>
-        /// <remarks>
-        /// HDD free space
-        /// </remarks>
-        private long GetTotalFreeSpace(string driveName)
-        {
-            foreach (System.IO.DriveInfo drive in System.IO.DriveInfo.GetDrives())
-            {
-                if (drive.IsReady && drive.Name == driveName)
-                {
-                    return drive.TotalFreeSpace;
-                }
-            }
-            return -1;
-        }
-        /// <summary>
-        /// MTmon status 送信ルーチン
-        /// </summary>
-        /// <remarks>
-        /// MTmon status send
-        /// </remarks>
-        private void MTmon_Data_Send(object sender)
-        {
-            // MTmon status for UDP
-            //データを送信するリモートホストとポート番号
-            string remoteHost = mmFsiCore_i5;
-            int remotePort = mmFsiUdpPortMTmonitor;
-            //送信するデータを読み込む
-            mtmon_data.id = (byte)appSettings.MtMon_ID;
-            mtmon_data.diskspace = (int)(diskspace / (1024 * 1024 * 1024));
-            if (frame_id == id_mon)
-            {
-                mtmon_data.obs = (byte)STOP;
-            }
-            else
-            {
-                mtmon_data.obs = (byte)this.States;
-            }
-            id_mon = frame_id;
-            //mtmon_data.obs = this.States ; 
-            byte[] sendBytes = ToBytes(mtmon_data);
-
-            try
-            {
-                //リモートホストを指定してデータを送信する
-                udpc3.Send(sendBytes, sendBytes.Length, remoteHost, remotePort);
-            }
-            catch (Exception ex)
-            {
-                //匿名デリゲートで表示する
-                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
-            }
-        }
-        static byte[] ToBytes(MT_MONITOR_DATA obj)
-        {
-            int size = Marshal.SizeOf(typeof(MT_MONITOR_DATA));
-            IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(obj, ptr, false);
-            byte[] bytes = new byte[size];
-            Marshal.Copy(ptr, bytes, 0, size);
-            Marshal.FreeHGlobal(ptr);
-            return bytes;
-        }
-
 
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
@@ -1466,6 +1264,11 @@ namespace MT3
         }
 
         private void checkBoxDispAvg_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Button5_Click(object sender, EventArgs e)
         {
 
         }

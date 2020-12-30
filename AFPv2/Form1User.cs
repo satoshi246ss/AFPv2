@@ -239,7 +239,7 @@ namespace AFPv2
             return (ts.TotalDays);
         }
 
-        public void iplimageInit()
+        public void IplImageInit()
         {
             int wi = appSettings.Width;
             int he = appSettings.Height;
@@ -1278,7 +1278,7 @@ namespace AFPv2
         {
             // 文字入れ
             //String str = String.Format("ID:{0,6:D1} ", imgdata.id) + imgdata.t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F1})", gx, gy, max_val);
-            //img_dmk.PutText(str, new CvPoint(10, 460), font, new CvColor(255, 100, 100));
+            //img_dmk.PutText(str, new CvPoint(10, 460), font, new Scalar(255, 100, 100));
 
             //try
             //{
@@ -1772,6 +1772,115 @@ namespace AFPv2
         }
 
         #endregion
+        #region アナログキャプチャー
+        // 別スレッド処理（キャプチャー）
+        private void worker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker bw = (BackgroundWorker)sender;
+            Stopwatch sw = new Stopwatch();
+            string str;
+            //id = 0;
+
+            //videoInputオブジェクト
+            int DeviceID = appSettings.CameraID; // 基本は、0　 // 3 (pro), 4(piccolo)  7(DMK)
+            int CaptureFps = (int)appSettings.Framerate;  // 30
+            int interval = (int)(1000 / CaptureFps / 10);
+
+            using (VideoInput vi = new VideoInput())
+            {
+                vi.SetIdealFramerate(DeviceID, CaptureFps);
+                vi.SetupDevice(DeviceID, appSettings.Width, appSettings.Height);
+
+                int width = vi.GetWidth(DeviceID);
+                int height = vi.GetHeight(DeviceID);
+
+                using (IplImage img = new IplImage(width, height, BitDepth.U8, 3))
+                //using (IplImage img_mono = new IplImage(width, height, BitDepth.U8, 1))
+                {
+                    long elapsed0 = 0, elapsed1 = 0;
+                    double framerate0 = 0, framerate1 = 0;
+                    double alfa_fr = 0.999;
+                    sw.Start();
+                    while (bw.CancellationPending == false)
+                    {
+                        if (vi.IsFrameNew(DeviceID))
+                        {
+                            DateTime dn = DateTime.Now; //取得時刻
+                            vi.GetPixels(DeviceID, img.ImageData, false, true);
+                            bw.ReportProgress(0, img);
+
+                            // 処理速度
+                            elapsed0 = sw.ElapsedTicks - elapsed1; // 1frameのticks
+                            elapsed1 = sw.ElapsedTicks;
+                            framerate0 = alfa_fr * framerate1 + (1 - alfa_fr) * (Stopwatch.Frequency / (double)elapsed0);
+                            framerate1 = framerate0;
+                            dFramerate = framerate0;
+
+                            str = String.Format("[{0,0:000}ms]", 1000 * elapsed0 / Stopwatch.Frequency);
+                            //匿名デリゲートで現在の時間をラベルに表示する
+                            this.Invoke(new dlgSetString(ShowLabelText), new object[] { label_frame_rate, str });
+                        }
+                        Application.DoEvents();
+                        Thread.Sleep(interval);
+                    }
+                    this.States = STOP;
+                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsStart, this.States });
+                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsEndButton, this.States });
+                    vi.StopDevice(DeviceID);
+                }
+            }
+        }
+        //
+        // アナログ画像保存
+        //
+        /*
+        private void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            IplImage image = (IplImage)e.UserState;
+            Cv.Split(image, imgdata.img, null, null, null);
+
+            // 表示画像反転 実装場所　要検討
+            if (appSettings.FlipOn)
+            {
+                if (appSettings.Flipmode == OpenCvSharp.FlipMode.X || appSettings.Flipmode == OpenCvSharp.FlipMode.Y)
+                {
+                    Cv.Flip(imgdata.img, imgdata.img, appSettings.Flipmode);
+                }
+            }
+
+            // MT2 CCD Hot pixel (2015/5/16)
+            ccd_defect_correct(452, 272);
+            ccd_defect_correct(396, 330);
+            ccd_defect_correct(397, 330);
+            ccd_defect_correct(398, 330);
+            ccd_defect_correct(293, 433);
+            ccd_defect_correct(292, 433);
+            ccd_defect_correct(169, 408);
+            ccd_defect_correct(107, 303);
+            ccd_defect_correct(52, 320);
+            ccd_defect_correct(53, 320);
+            ccd_defect_correct(26, 340);
+            ccd_defect_correct(27, 191);
+            ccd_defect_correct(28, 191);
+            ccd_defect_correct(553, 243);
+            ccd_defect_correct(554, 243);
+            ccd_defect_correct(555, 243);
+            ccd_defect_correct(556, 243);
+            ccd_defect_correct(624, 252);
+            ccd_defect_correct(220, 41);
+
+            ++frame_id;
+            detect();
+            imgdata_push_FIFO();
+
+            if (checkBoxDispAvg.Checked == true)
+            {
+                Cv.RunningAvg(imgdata.img, imgAvg, 0.1);
+                //Cv.ShowImage("Video", imgAvg);
+            }
+        }
+        */
+
     }
 }
 #endregion

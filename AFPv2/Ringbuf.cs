@@ -629,7 +629,7 @@ namespace AFPv2
             Cv2.CopyTo(this.img[this.bottom], imgR);
 
             //String str = String.Format("ID:{0,6:D1} ", this.data[this.bottom].id) + this.data[this.bottom].t.ToString("yyyyMMdd_HHmmss_fff") ;
-            //imgR.PutText(str, new CvPoint(6, 14), font, new CvColor(0, 100, 120)); 
+            //imgR.PutText(str, new CvPoint(6, 14), font, new Scalar(0, 100, 120)); 
             //Cv2.PutText(img, "English!!", new OpenCvSharp.Point(10, 180), HersheyFonts.HersheyComplexSmall, 1, new Scalar(255, 0, 255), 1, LineTypes.AntiAlias);
 
 
@@ -639,8 +639,8 @@ namespace AFPv2
             //if (this.data[this.bottom].ImgSaveFlag) str += " True";
             //Cv.CvtColor(this.img[this.bottom], imgGBR, ColorConversion.GrayToBgr);
             //3    Cv.Copy(this.img[this.bottom], imgGBR); //3
-            //imgGBR.PutText(str, new CvPoint(6, 14) , font, new CvColor(0, 100, 100));
-            //imgGBR.Circle(new CvPoint((int)(gx+0.5),(int)(gy+0.5)), 15, new CvColor(0, 100, 255));
+            //imgGBR.PutText(str, new CvPoint(6, 14) , font, new Scalar(0, 100, 100));
+            //imgGBR.Circle(new CvPoint((int)(gx+0.5),(int)(gy+0.5)), 15, new Scalar(0, 100, 255));
 
             vw.Write(imgR);
             //writer.WriteLine("{0} {1} {2}  ", vd.id, vd.kgx, vd.kgy);
