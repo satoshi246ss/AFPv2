@@ -32,8 +32,34 @@ using System.Runtime.InteropServices;
 
 namespace AFPv2
 {
-    class PointGreyCamera
+    //class PointGreyCamera
+    public partial class Form1 : Form
     {
+        const int pgr_WIDTH  = 4096;
+        const int pgr_HEIGHT = 3000;
+        // set image size
+        private const int AllocSize = pgr_WIDTH * pgr_HEIGHT * 1; //IMX352 mono
+
+        // For old PGR
+        public double pgr_frame_rate_pre = 0;
+        public double alpha_pgr_frame_rate = 0.99;
+        public double pgr_image_expo_us { get; set; }
+        public double pgr_image_gain { get; set; }
+        public double pgr_temparature { get; set; }
+        public double pgr_framerate { get; set; }
+        public uint pgr_image_frame_count { get; set; }
+        public long pgr_StreamFailedBufferCount { get; set; }
+        public bool pgr_post_save = false;
+
+        public IManagedCamera cam_iel;
+        public INodeMap nodeMap_iel;
+
+        // Retrieve singleton reference to system object
+        internal ManagedSystem pgr_system;// = new ManagedSystem();
+        // Retrieve list of cameras from the system
+        ManagedCameraList camList;// = pgr_system.GetCameras();
+        IManagedCamera imanagedCamera;
+
         // This class defines the properties, parameters, and the event handler itself.
         // Take a moment to notice what parts of the class are mandatory, and
         // what have been added for demonstration purposes. First, any class
@@ -44,8 +70,10 @@ namespace AFPv2
         // other functions, is particular to the example.
         class ImageEventListener : ManagedImageEventHandler
         {
+            object lockObject = new object();
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
             private string deviceSerialNumber;
-            public const int NumImages = 20;
+            public const int NumImages = 30 * 60 * 60 * 24 * 7; //kari 1week bun
             public int imageCnt;
             // The constructor retrieves the serial number and initializes the
             // image counter to 0.
@@ -63,8 +91,6 @@ namespace AFPv2
                 }
             }
 
-            // set image size
-            private const int AllocSize = 4096 * 3000 * 1;
             //MarshalクラスのCopyメソッドで一括コピー
             private static void MarshalCopy(IntPtr src, IntPtr dest)
             {
@@ -86,10 +112,10 @@ namespace AFPv2
             }
 
             // UnmanagedMemoryStreamでCopyToで一括コピー
-            private unsafe static void CopyTo(IntPtr src, IntPtr dest)
+            private unsafe static void CopyTo(IntPtr src, IntPtr dest, int aSize)
             {
-                using (UnmanagedMemoryStream streamSrc = new UnmanagedMemoryStream((byte*)src, AllocSize))
-                using (UnmanagedMemoryStream streamDst = new UnmanagedMemoryStream((byte*)dest, AllocSize, AllocSize, FileAccess.Write))
+                using (UnmanagedMemoryStream streamSrc = new UnmanagedMemoryStream((byte*)src, aSize))
+                using (UnmanagedMemoryStream streamDst = new UnmanagedMemoryStream((byte*)dest, aSize, aSize, FileAccess.Write))
                 {
                     streamSrc.CopyTo(streamDst);
                 }
@@ -103,7 +129,70 @@ namespace AFPv2
                 CopyMemory(src, dest, AllocSize);
             }
 
+            //
+            void write_image(IManagedImage image, int imageCnt)
+            {
+                // Convert image
+                using (IManagedImage convertedImage = image.Convert(PixelFormatEnums.Mono8, ColorProcessingAlgorithm.HQ_LINEAR))
+                {
+                    // Print image information
+                    Console.WriteLine(
+                        "Grabbed image {0}, width = {1}, height = {2}",
+                        imageCnt,
+                        convertedImage.Width,
+                        convertedImage.Height);
+                    // Create unique filename in order to save file
+                    String filename = "rImageEvents-CSharp-";
+                    filename = filename + imageCnt + ".jpg";
+                    // Save image
+                    //convertedImage.Save(filename);
+                    image.Save(filename);
+                    Console.WriteLine("Image saved at {0}\n", filename);
+                }
+            }
+            //
+            // This function converts between Spinnaker::ImagePtr container to cv::Mat container used in OpenCV.
+            //
+            Mat spinnakerWrapperToCvMat(IManagedImage mimg)
+            {
+                try
+                {
+                    uint XPadding = mimg.XPadding;// imagePtr->GetXPadding();
+                    uint YPadding = mimg.YPadding;// imagePtr->GetYPadding();
+                    uint rowsize = mimg.Width;    // Ptr->GetWidth();
+                    uint colsize = mimg.Height;   // Ptr->GetHeight();
 
+                    // Image data contains padding. When allocating cv::Mat container size, you need to account for the X,Y
+                    // image data padding.
+                    return new Mat((int)(colsize + YPadding), (int)(rowsize + XPadding), MatType.CV_8U, mimg.DataPtr, mimg.Stride);
+                }
+                catch (Exception ex)
+                {
+                    string str = ex.Data.ToString();
+                    Console.WriteLine("Exception: Error {0}", str);
+                    throw;
+                }
+            }
+            void spinnakerWrapperToCvMat(IManagedImage mimg, IntPtr ptr)
+            {
+                try
+                {
+                    uint XPadding = mimg.XPadding;// imagePtr->GetXPadding();
+                    uint YPadding = mimg.YPadding;// imagePtr->GetYPadding();
+                    uint rowsize = mimg.Width;    // Ptr->GetWidth();
+                    uint colsize = mimg.Height;   // Ptr->GetHeight();
+
+                    // Image data contains padding. When allocating cv::Mat container size, you need to account for the X,Y
+                    // image data padding.
+                    //        return new Mat((int)(colsize + YPadding), (int)(rowsize + XPadding), MatType.CV_8U, mimg.DataPtr, mimg.Stride);
+                }
+                catch (Exception ex)
+                {
+                    string str = ex.Data.ToString();
+                    Console.WriteLine("Exception: Error {0}", str);
+                    throw;
+                }
+            }
             // This method defines an image event. In it, the image that
             // triggered the event is converted and saved before incrementing
             // the count. Please see Acquisition_CSharp example for more
@@ -112,80 +201,79 @@ namespace AFPv2
             {
                 if (imageCnt < NumImages)
                 {
-                    Console.WriteLine("Image event occurred...");
+                    //Console.WriteLine("Image event occurred...");
                     if (image.IsIncomplete)
                     {
                         Console.WriteLine("Image incomplete with image status {0}...\n", image.ImageStatus);
                     }
                     else
                     {
-                        uint width = image.Width;
-                        uint height = image.Height;
+                        //uint width = image.Width;
+                        //uint height = image.Height;
+                        int asize = (int)(image.Width * image.Height * 1);
                         //Mat mat1 = new Mat(100, 200, MatType.CV_64FC1);
-                        using (Mat mat2 = new Mat((int)height, (int)width, MatType.CV_8U)) //mono8
+                        //using (Mat mat2 = new Mat((int)height, (int)width, MatType.CV_8U)) //mono8
+                        // Convert image
+                        //using (IManagedImage convertedImage = image.Convert(PixelFormatEnums.Mono8, ColorProcessingAlgorithm.HQ_LINEAR))
+                        //{                            
+                        try
                         {
-                            try
+                            lock (imgdata_static.img)
                             {
-                                lock (image)
-                                {
-                                    //imgdata_push_FIFO(frame.Buffer);
+                                sw.Reset();
+                                sw.Start();
+                                //imgdata_push_FIFO(frame.Buffer);
 
-                                    //img_dmk は使わず、直接imgdata.imgにコピー (0.3ms)
-                                    // DataPtr  intptr
-                                    //System.Runtime.InteropServices.Marshal.Copy(image.DataPtr, 0, mat2.Data, image.DataSize);
+                                //img_dmk は使わず、直接imgdata.imgにコピー (0.3ms)
+                                // DataPtr  intptr
+                                //System.Runtime.InteropServices.Marshal.Copy(image.DataPtr, 0, mat2.Data, image.DataSize);
 
-                                    // unsafeバージョン(0.2-0.3ms)
-                                    //  unsafe
-                                    // {
-                                    //      fixed (byte* pbytes = frame.Buffer)
-                                    //      {
-                                    //      }
-                                    // }
-                                    //MarshalCopy(image.DataPtr, mat2.Data);//OK
-                                    //CopyMemory(image.DataPtr, mat2.Data);//, (int)image.DataSize); 上手くいかない。
-                                    CopyTo(image.DataPtr, mat2.Data);//OK
-                                }
-                            }
-                            catch (SpinnakerException ex)
-                            {
-                                Console.WriteLine("Spin. Error {0}", ex);
-                            }
-                            catch (Exception ex)
-                            {
-                                string str = ex.Data.ToString();
-                                Console.WriteLine("Error {0}", str);
-                                //Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, str });
-                            }
+                                // unsafeバージョン(0.2-0.3ms)
+                                //  unsafe
+                                // {
+                                //      fixed (byte* pbytes = frame.Buffer)
+                                //      {
+                                //      }
+                                // }
+                                //MarshalCopy(image.DataPtr, imgdata_static.img.Data);//OK 5ms
+                                //CopyMemory(image.DataPtr, imgdata_static.img.Data);//, (int)image.DataSize); 上手くいかない。1.2ms
 
-                            Cv2.ImShow("grayscale_show", mat2);
+                                CopyTo(image.DataPtr, imgdata_static.img.Data, asize);//OK 1.5ms
+                                sw.Stop();
+                                //imgdata_static.img.SaveImage("mats0.jpg");
+                                Interlocked.Increment(ref imgdata_static_flag);
+                                Interlocked.Increment(ref frame_id);
+                                //CopyTo(image.DataPtr, mat2.Data, asize);//OK
 
-                            // Convert image
-                            using (
-                            IManagedImage convertedImage =
-                                image.Convert(PixelFormatEnums.Mono8, ColorProcessingAlgorithm.HQ_LINEAR))
-                            {
-                                // Print image information
-                                Console.WriteLine(
-                                    "Grabbed image {0}, width = {1}, height = {2}",
-                                    imageCnt,
-                                    convertedImage.Width,
-                                    convertedImage.Height);
-                                // Create unique filename in order to save file
-                                String filename = "ImageEvents-CSharp-";
-                                if (deviceSerialNumber != "")
-                                {
-                                    filename = filename + deviceSerialNumber + "-";
-                                }
-                                filename = filename + imageCnt + ".jpg";
-                                // Save image
-                                convertedImage.Save(filename);
-                                Console.WriteLine("Image saved at {0}\n", filename);
-                                // Increment image counter
-                                imageCnt++;
+                                //var mat2 = spinnakerWrapperToCvMat(image);
+                                //imgdata_static.img = mat2.Clone();
+                                //imgdata_static.img.SaveImage("mats1.jpg");
+                                //mat2.SaveImage("mat2.jpg");
+
+                                long microseconds = sw.ElapsedTicks / (System.Diagnostics.Stopwatch.Frequency / (1000L * 1000L));
+                                Console.WriteLine("OnImageEvent CopyTo : " + frame_id.ToString() +": ("+ sw.ElapsedMilliseconds.ToString()+")ms "+microseconds );
                             }
                         }
+                        catch (SpinnakerException ex)
+                        {
+                            logger.Error(ex.Data.ToString());
+                            Console.WriteLine("SpinnakerException: Error {0}", ex);
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex.Data.ToString());
+                            string str = ex.Data.ToString();
+                            Console.WriteLine("Exception: Error {0}", str);
+                            throw;
+                            //Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, str });
+                        }
+                        //}
+                        //write_image(image, imageCnt); 
                         // Must manually release the image to prevent buffers on the camera stream from filling up
                         image.Release();
+                        // Increment image counter
+                        imageCnt++;
                     }
                 }
             }
@@ -244,15 +332,100 @@ namespace AFPv2
                 // *** NOTES ***
                 // In order to passively capture images using image events and
                 // automatic polling, the main thread sleeps in increments of
-                // 200 ms until 10 images have been acquired and saved.
+                // 20 ms until 10 images have been acquired and saved.
                 //
-                const int sleepDuration = 200;
-                while (imageEventListener.imageCnt < ImageEventListener.NumImages)
+                const int sleepDuration = 1;
+                while (imageEventListener.imageCnt < ImageEventListener.NumImages && pgc_cam_stop_flag == 0)
                 {
-                    Console.WriteLine("\t//");
-                    Console.WriteLine("\t// Sleeping for {0} time slices. Grabbing images...", sleepDuration);
-                    Console.WriteLine("\t//");
+                    //Console.WriteLine("\t//");
+                    //Console.WriteLine("\t// Sleeping for {0} time slices. Grabbing images...", sleepDuration);
+                    //Console.WriteLine("\t//");
                     Thread.Sleep(sleepDuration);
+                    if (imgdata_static_flag > 0) //画像が準備できるとinc
+                    {
+                        ++frame_fifo_id;
+                        detect();
+
+                        sw.Reset(); sw.Start();
+                        imgdata_static_push_FIFO();
+                        Interlocked.Exchange(ref imgdata_static_flag, 0);
+                        sw.Stop();
+                        long microseconds = sw.ElapsedTicks / (System.Diagnostics.Stopwatch.Frequency / (1000L * 1000L));
+                        Console.WriteLine("imgdata_static_push_FIFO() : " + frame_id.ToString() + ": (" + sw.ElapsedMilliseconds.ToString() + ")ms " + microseconds);
+
+                        // update パラメータ
+                        if (frame_id % 32 == 0) // about 1sec
+                        {
+                            try
+                            {
+                                IFloat val;
+                                IInteger ival;
+                                val = nodeMap_iel.GetNode<IFloat>("Gain");
+                                if (val == null || !val.IsReadable)
+                                {
+                                    string s = "Unable to read 'Gain' (node retrieval).\n";
+                                    logger.Error(s);
+                                    Console.WriteLine(s);
+                                }
+                                else
+                                    pgr_image_gain = val.Value;
+                                
+                                val = nodeMap_iel.GetNode<IFloat>("DeviceTemperature");
+                                if (val == null || !val.IsReadable)
+                                {
+                                    string s = "Unable to read 'DeviceTemperature' (node retrieval).\n";
+                                    logger.Error(s);
+                                    Console.WriteLine(s);
+                                }
+                                else
+                                    pgr_temparature = val.Value;
+                                
+                                val = nodeMap_iel.GetNode<IFloat>("ExposureTime");
+                                if (val == null || !val.IsReadable)
+                                {
+                                    string s = "Unable to read 'ExposureTime' (node retrieval).\n";
+                                    logger.Error(s);
+                                    Console.WriteLine(s);
+                                }
+                                else
+                                    pgr_image_expo_us = val.Value;
+
+                                val = nodeMap_iel.GetNode<IFloat>("AcquisitionFrameRate");
+                                if (val == null || !val.IsReadable)
+                                {
+                                    string s = "Unable to read 'AcquisitionFrameRate' (node retrieval).\n";
+                                    logger.Error(s);
+                                    Console.WriteLine(s);
+                                }
+                                else
+                                    pgr_framerate = val.Value;
+
+                                ival = nodeMap_iel.GetNode<IInteger>("StreamFailedBufferCount");
+                                if (ival == null || !ival.IsReadable)
+                                {
+                                    string s = "Unable to read 'StreamFailedBufferCount' (node retrieval).\n";
+                                    logger.Error(s);
+                                    Console.WriteLine(s);
+                                }
+                                else
+                                    pgr_StreamFailedBufferCount = ival.Value;
+                                
+                            }
+                            catch (SpinnakerException ex)
+                            {
+                                logger.Error(ex.Data.ToString());
+                                Console.WriteLine("Spinnaker Error: {0}", ex.Message);
+                                result = -1;
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex.Data.ToString());
+                                Console.WriteLine("Error: {0}", ex.Message);
+                                result = -1;
+                            }
+                        }
+                    }
+                    pgc_cam_stop_flag = 0;
                 }
             }
             catch (SpinnakerException ex)
@@ -359,7 +532,8 @@ namespace AFPv2
             }
             catch (SpinnakerException ex)
             {
-                Console.WriteLine("Error: {0}", ex.Message);
+                Console.WriteLine("SpinnakerException Error1: {0}", ex.Message);
+                //throw;
                 result = -1;
             }
             return result;
@@ -381,6 +555,8 @@ namespace AFPv2
                 cam.Init();
                 // Retrieve GenICam nodemap
                 INodeMap nodeMap = cam.GetNodeMap();
+                nodeMap_iel = nodeMap;
+                cam_iel = cam;
                 // Configure image event handlers
                 ImageEventListener imageEventListener = null;
                 err = ConfigureImageEvents(cam, ref imageEventListener);
@@ -397,7 +573,7 @@ namespace AFPv2
             }
             catch (SpinnakerException ex)
             {
-                Console.WriteLine("Error: {0}", ex.Message);
+                Console.WriteLine("pinnakerException Error2: {0}", ex.Message);
                 result = -1;
             }
             return result;
@@ -405,31 +581,13 @@ namespace AFPv2
 
         // Example entry point; please see Enumeration_CSharp example for more
         // in-depth comments on preparing and cleaning up the system.
-        internal static int initPGRcamera(string[] args)
+        internal int initPGRcamera()
         {
             int result = 0;
-            PointGreyCamera pgc = new PointGreyCamera();
-            // Since this application saves images in the current folder
-            // we must ensure that we have permission to write to this folder.
-            // If we do not have permission, fail right away.
-            FileStream fileStream;
-            try
-            {
-                fileStream = new FileStream(@"test.txt", FileMode.Create);
-                fileStream.Close();
-                File.Delete("test.txt");
-            }
-            catch
-            {
-                Console.WriteLine("Failed to create file in current folder. Please check permissions.");
-                Console.WriteLine("Press enter to exit...");
-                Console.ReadLine();
-                return -1;
-            }
             // Retrieve singleton reference to system object
-            ManagedSystem system = new ManagedSystem();
+            pgr_system = new ManagedSystem();
             // Print out current library version
-            LibraryVersion spinVersion = system.GetLibraryVersion();
+            LibraryVersion spinVersion = pgr_system.GetLibraryVersion();
             Console.WriteLine(
                 "Spinnaker library version: {0}.{1}.{2}.{3}\n\n",
                 spinVersion.major,
@@ -437,7 +595,7 @@ namespace AFPv2
                 spinVersion.type,
                 spinVersion.build);
             // Retrieve list of cameras from the system
-            ManagedCameraList camList = system.GetCameras();
+            camList = pgr_system.GetCameras();
             Console.WriteLine("Number of cameras detected: {0}\n\n", camList.Count);
             // Finish if there are no cameras
             if (camList.Count == 0)
@@ -445,38 +603,109 @@ namespace AFPv2
                 // Clear camera list before releasing system
                 camList.Clear();
                 // Release system
-                system.Dispose();
+                pgr_system.Dispose();
                 Console.WriteLine("Not enough cameras!");
                 Console.WriteLine("Done! Press Enter to exit...");
                 Console.ReadLine();
                 return -1;
             }
+            return result;
+        }
+
+        internal int OpenPGRcamera() //(IProgress<int> p, CancellationToken cancelToken) //RunPGRcamera()
+        {
+            initPGRcamera();
+
+            int result = 0;
             // Run example on each camera
             int index = 0;
-            foreach (IManagedCamera managedCamera in camList) using (managedCamera)
+            foreach (IManagedCamera managedCamera in camList)  using (managedCamera) 
                 {
                     Console.WriteLine("Running example for camera {0}...", index);
                     try
                     {
                         // Run example
-                        result = result | pgc.RunSingleCamera(managedCamera);
+                        result = result | RunSingleCamera(managedCamera);
                     }
                     catch (SpinnakerException ex)
                     {
+                        logger.Error(ex.Data.ToString());
                         Console.WriteLine("Error: {0}", ex.Message);
                         result = -1;
                     }
                     Console.WriteLine("Camera {0} example complete...\n", index++);
                 }
+            return result;
+        }
+
+        internal void ClosePGRcamera()
+        {
+            Thread.Sleep(2000);
             // Clear camera list before releasing system
             camList.Clear();
             // Release system
-            system.Dispose();
-            Console.WriteLine("\nDone! Press Enter to exit...");
-            Console.ReadLine();
-            return result;
+            pgr_system.Dispose();
+            Console.WriteLine("\nDone!");
+            //Console.ReadLine();
+            //return result;
         }
+
+        /// <summary>
+        /// FIFO pushルーチン for PGC
+        /// imgdata_static.img　は　すでにセット済み
+        /// </summary>
+        private void imgdata_static_push_FIFO()  //2msくらい
+        {
+            lock (imgdata_static.img)
+            {
+                // 文字入れ
+                //String str = String.Format("ID:{0,6:D1} ", imgdata.id) + imgdata.t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F1})", gx, gy, max_val);
+                //img_dmk.PutText(str, new CvPoint(10, 460), font, new Scalar(255, 100, 100));
+
+                //try
+                //{
+                //Cv.Sub(img_dmk, img_dark8, imgdata.img); // dark減算
+                //Cv.Copy(img_dmk, imgdata.img);
+                // cam.Information.GetImageInfo(s32MemID, out imageInfo);
+                imgdata_static.id = (int)frame_id;     // (int)imageInfo.FrameNumber;
+                imgdata_static.t = DateTime.Now; //imageInfo.TimestampSystem;   //  LiveStartTime.AddSeconds(CurrentBuffer.SampleEndTime);
+                imgdata_static.ImgSaveFlag = !(ImgSaveFlag != 0); //int->bool変換
+                                                                  //statusRet = cam.Timing.Exposure.Get(out exp);
+                imgdata_static.gx = gx;
+                imgdata_static.gy = gy;
+                imgdata_static.kgx = kgx;
+                imgdata_static.kgy = kgy;
+                imgdata_static.kvx = kvx;
+                imgdata_static.kvy = kvy;
+                imgdata_static.vmax = max_val;
+                imgdata_static.blobs = blobs;
+                imgdata_static.udpkv1 = (Udp_kv)udpkv.Clone();
+                imgdata_static.az = az;
+                imgdata_static.alt = alt;
+                imgdata_static.vaz = vaz;
+                imgdata_static.valt = valt;
+                if (fifo.Count == appSettings.FifoMaxFrame - 1) fifo.EraseLast();
+                fifo.InsertFirst(ref imgdata_static);
+
+                /*}
+                catch (Exception ex)
+                {
+                    //匿名デリゲートで表示する
+                    this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
+                    System.Diagnostics.Trace.WriteLine(ex.Message);
+                }*/
+                double alfa = 0.05;
+                if (frame_id % 4 == 0) // mabiki
+                {
+                    //Cv2.RunningAvg(imgdata.img, imgAvg, 0.05); // 6ms
+                    //Cv2.AccumulateWeighted(fifo.Last().img, imgAvg, alfa, null);
+                    Cv2.AccumulateWeighted(imgdata_static.img, imgAvg, alfa, null); // 6msくらい
+                }
+            }
+        }
+
     }
+
 }
 
 

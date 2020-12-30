@@ -46,7 +46,7 @@ namespace AFPv2
         int kalman_id = 0;
         public double kvaz, kvalt;
         // 観測値(kalman)
-        Mat measurement = new Mat(2, 1, MatType.CV_32FC1);
+        Mat measurement = new Mat(1, 2, MatType.CV_32FC1);
         Mat correction;
         Mat prediction;
 

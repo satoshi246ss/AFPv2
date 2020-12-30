@@ -77,6 +77,9 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MathNet.Numerics, Version=4.14.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MathNet.Numerics.4.14.0\lib\net461\MathNet.Numerics.dll</HintPath>
+    </Reference>
     <Reference Include="MtLibrary2">
       <HintPath>.\MtLibrary2.dll</HintPath>
     </Reference>
@@ -129,6 +132,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Detect.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -136,7 +142,9 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="Form1User.cs" />
-    <Compile Include="PointGreyCamera.cs" />
+    <Compile Include="PointGreyCamera.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="position_mesure.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -146,6 +154,7 @@
     <Compile Include="Udp_kv.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

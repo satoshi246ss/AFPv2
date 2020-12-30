@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
 using NLog;
+//using VideoInputSharp;
 //using PylonC.NETSupportLibrary;
 //using uEye;
 using MtLibrary2;
@@ -118,10 +119,6 @@ namespace AFPv2
         int xoa_mes = 640 / 2; //320  2013/11/23 MT3QHYの中心に変更
         int yoa_mes = 480 / 2; //256;  //240
         double test_start_id = 0;
-        double xoa_test_start = 70;
-        double yoa_test_start = 70;
-        double xoa_test_step = 1;
-        double yoa_test_step = 1;
 
         #endregion
 
@@ -137,7 +134,7 @@ namespace AFPv2
         int xoa;  //320
         int yoa;  //240
         int roa = 10;
-        double xoad, yoad;
+        //double xoad, yoad;
 
         public double theta_c = 0 ;
         public double dx, dy ;
@@ -148,7 +145,8 @@ namespace AFPv2
         position_mesure pos_mes = new position_mesure();
 
         // 観測開始からのフレーム番号
-        int frame_id = 0;
+        public static int frame_id = 0;
+        int frame_fifo_id = 0;
         int id_mon = 0;
         DateTime LiveStartTime;
         //long timestamp; // [us]
@@ -158,15 +156,16 @@ namespace AFPv2
         double dExpo = 0; // Exposure[us]
         long igain = 0; //Gain
 
-        ImageData imgdata = new ImageData(640,480); //struck 初期化ダミー
+        public ImageData imgdata = new ImageData(640,480); //struck 初期化ダミー
         CircularBuffer fifo = new CircularBuffer();
-
+        public static ImageData imgdata_static = new ImageData(640, 480); //struck 初期化ダミー
+        public static int imgdata_static_flag =0; // 0:新規データなし。　1以上：新規データ数
+        public static int pgc_cam_stop_flag = 0; // 0:そのまま　1:撮像停止
 
         double set_exposure  = 3;   // [ms]            F1.8:F4  exp 8ms:3ms  gain 1024: 100  約106倍
         double set_exposure1 = 0.2; // [ms]
  
         Mat img_dmk3, img_dmk, img2 , imgAvg, img_ueye_aoi, img_mask, img_mask2, img_dark8;
-        //Mat imgLabel;
         CvBlobs blobs = new CvBlobs();
         //Font font = new CvFont(FontFace.HersheyComplex, 0.50, 0.50);
         //Font font_big = new CvFont(FontFace.HersheyComplex, 1.0, 1.0);
@@ -182,13 +181,13 @@ namespace AFPv2
         KalmanFilter kalman = new KalmanFilter(4, 2);// Cv.CreateKalman(4, 2);
         int kalman_id = 0;
         // 観測値(kalman)
-        Mat measurement = new Mat(2, 1, MatType.CV_32FC1);// .F32C1);
+        Mat measurement = new Mat(1, 2, MatType.CV_32FC1);// .F32C1);
         Mat correction;
         Mat prediction;
 
         // 位置補正データ
-        Mat grid_az  = new Mat(360, 90, MatType.CV_64FC1);
-        Mat grid_alt = new Mat(360, 90, MatType.CV_64FC1);
+        Mat grid_az  = new Mat(90, 360, MatType.CV_64FC1);
+        Mat grid_alt = new Mat(90, 360, MatType.CV_64FC1);
         //frame rate 用
         Stopwatch sw_fr = new Stopwatch();
         long elapsed_fr0 = 0, elapsed_fr1 = 0;
@@ -239,7 +238,7 @@ namespace AFPv2
             return (ts.TotalDays);
         }
 
-        public void iplimageInit()
+        public void IplImageInit()
         {
             int wi = appSettings.Width;
             int he = appSettings.Height;
@@ -254,23 +253,24 @@ namespace AFPv2
                 he = appSettings.uEye_AOI_h;
             }
                 
-            img_dmk3 = new Mat(wi, he, MatType.CV_8U, 3);
-            img_dmk  = new Mat(wi, he, MatType.CV_8U, 1);
-            img_mask = new Mat(wi, he, MatType.CV_8U, 1);
-            img_ueye_aoi = new Mat(appSettings.Width, he, MatType.CV_8U, 1);
+            img_dmk3 = new Mat(he, wi,  MatType.CV_8U, 3);
+            img_dmk  = new Mat(he, wi,  MatType.CV_8U, 1);
+            img_mask = new Mat(he, wi,  MatType.CV_8U, 1);
+            img_ueye_aoi = new Mat(he, appSettings.Width, MatType.CV_8U, 1);
             string filePath = @"dark00.png";// CVM4000用　固定パタンノイズが大きいため
             if (File.Exists(filePath))
             {
                 img_dark8 = Cv2.ImRead(filePath, ImreadModes.Grayscale);
             }
 
-            img2 = new Mat(wi, he, MatType.CV_8U, 1);
-            //imgLabel  = new Mat(wi, he, CvBlobLib.DepthLabel, 1);
+            img2 = new Mat(he, wi,  MatType.CV_8U, 1);
+            //imgLabel  = new Mat(he, wi,  CvBlobLib.DepthLabel, 1);
             
-            imgAvg    = new Mat(wi, he, MatType.CV_32F, 1);
-            img_mask2 = new Mat(wi, he, MatType.CV_8U, 1);
+            imgAvg    = new Mat(he, wi,  MatType.CV_32F, 1);
+            img_mask2 = new Mat(he, wi,  MatType.CV_8U, 1);
 
             imgdata.init(wi, he);
+            imgdata_static.init(wi, he);
             // FIFO init
             if (appSettings.CamPlatform == Platform.MT2)
             {
@@ -562,7 +562,7 @@ namespace AFPv2
 
             // FishEye2 PointGreyCamera (2020/11/23 - 2020/) IMX253
             sett.Text = "FishEye2 PGC GS3-U3-123S6M (Sony IMX253)";
-            sett.ID = 1;               //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
+            sett.ID = -1;               //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
             sett.NoCapDev = 1;
             sett.MtMon_ID = 1;
             sett.CameraType = "PG";    //カメラタイプ： IDS Basler AVT IS analog
@@ -599,6 +599,49 @@ namespace AFPv2
             sett.SaveDrive = "D:";
             sett.AviMaxFrame = 500;
             SettingsSave(sett);
+
+            // for test 3000x4096pix
+            // FishEye2 PointGreyCamera (2020/11/23 - 2020/) Sony IMX253, CMOS, 1.1"
+            sett.Text = "FishEye2 PGC GS3-U3-123S6M (Sony IMX253)";
+            sett.ID = 31;               //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
+            sett.NoCapDev = 31;
+            sett.MtMon_ID = 31;
+            sett.CameraType = "PG";    //カメラタイプ： IDS Basler AVT IS analog
+            sett.CameraID = 1;         //カメラタイプ毎のID
+            sett.CameraColor = Camera_Color.mono;    // 0:mono(mono8)  1:color 2:mono12packed
+            sett.CameraInterface = Camera_Interface.USB3;
+            sett.CamPlatform = Platform.Fish1;
+            sett.FlipOn = false;
+            //sett.Flipmode = OpenCvSharp.FlipMode.X;
+            //sett.IP_GIGE_Camera = "192.168.1.151"; //GIGE Camera only.
+            sett.Width = 4096;// 2608; // 652; //Max 659    4の倍数でメモリ確保される。
+            sett.Height = 3000;// 2608; // 949; //Max 494    約2.2MB／fr
+            sett.FocalLength = 25.0;      //[mm] Fuji FE185C086HA-1  fl=2.7mm f1.8
+            sett.Ccdpx = 0.00345; //[mm] CCD:IMX253
+            sett.Ccdpy = 0.00345; //[mm] CCD:IMX253
+            sett.Xoa = 2048;// 320;
+            sett.Yoa = 1500;// 240;            
+            sett.Roa = 50.0 / (Math.Atan(sett.Ccdpx / sett.FocalLength) * 180 / Math.PI); //半径1deg    // 255x192:ace640の縦視野
+            sett.Roa = 300.0;// / (Math.Atan(sett.Ccdpx / sett.FocalLength) * 180 / Math.PI); //半径1deg    // 255x192:ace640の縦視野
+            sett.Theta = 175;
+            sett.Framerate = 30;// 100.0; //[fps]
+            sett.FifoMaxFrame = 32;
+            sett.ExposureValue = -0.5;
+            sett.Exposure = 32; //[ms]
+            sett.Gain = 1023; // 100-1023  要検討
+            sett.UseDetect = true; //false;// true;
+            sett.PreSaveNum = 100;
+            sett.PostSaveProcess = true;
+            sett.ThresholdBlob = 64;    // 検出閾値（０－２５５）
+            sett.ThresholdMinArea = 0.25;// 最小エリア閾値（最大値ｘ_threshold_min_area)
+            sett.UdpPortRecieve = 24410; // Broadcast0
+            //sett.UdpPortRecieve = 24442; //Broadcast2
+            sett.UdpPortSend = 24431;
+            sett.SaveDir = @"E:\img_data\";
+            sett.SaveDrive = "E:";
+            sett.AviMaxFrame = 256;
+            SettingsSave(sett);
+
 
             // MT3Wide2 PointGreyCamera
             sett.Text = "Wide2 PGC GS3-U3-23S6M";
@@ -1278,7 +1321,7 @@ namespace AFPv2
         {
             // 文字入れ
             //String str = String.Format("ID:{0,6:D1} ", imgdata.id) + imgdata.t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F1})", gx, gy, max_val);
-            //img_dmk.PutText(str, new CvPoint(10, 460), font, new CvColor(255, 100, 100));
+            //img_dmk.PutText(str, new CvPoint(10, 460), font, new Scalar(255, 100, 100));
 
             //try
             //{
@@ -1771,6 +1814,117 @@ namespace AFPv2
             return bytes;
         }
 
+        #endregion
+        #region アナログキャプチャー
+        // 別スレッド処理（キャプチャー）
+        private void worker_DoWork(object sender, DoWorkEventArgs e)
+        {
+            BackgroundWorker bw = (BackgroundWorker)sender;
+            Stopwatch sw = new Stopwatch();
+            //string str;
+            //id = 0;
+
+            //videoInputオブジェクト
+            int DeviceID = appSettings.CameraID; // 基本は、0　 // 3 (pro), 4(piccolo)  7(DMK)
+            int CaptureFps = (int)appSettings.Framerate;  // 30
+            int interval = (int)(1000 / CaptureFps / 10);
+
+     /*       using (VideoInput vi = new VideoInput())
+            {
+                vi.SetIdealFramerate(DeviceID, CaptureFps);
+                vi.SetupDevice(DeviceID, appSettings.Width, appSettings.Height);
+
+                int width = vi.GetWidth(DeviceID);
+                int height = vi.GetHeight(DeviceID);
+
+                using (Mat img = new Mat(height, width, MatType.CV_8U, 3))  //BitDepth.U8, 3))
+                //using (IplImage img_mono = new IplImage(width, height, BitDepth.U8, 1))
+                {
+                    elapsed0 = 0;
+                    elapsed1 = 0;
+                    double framerate0 = 0, framerate1 = 0;
+                    double alfa_fr = 0.999;
+                    sw.Start();
+                    while (bw.CancellationPending == false)
+                    {
+                        if (vi.IsFrameNew(DeviceID))
+                        {
+                            DateTime dn = DateTime.Now; //取得時刻
+                            ////vi.GetPixels(DeviceID, img.DataPointer, false, true);
+                            bw.ReportProgress(0, img);
+
+                            // 処理速度
+                            elapsed0 = sw.ElapsedTicks - elapsed1; // 1frameのticks
+                            elapsed1 = sw.ElapsedTicks;
+                            framerate0 = alfa_fr * framerate1 + (1 - alfa_fr) * (Stopwatch.Frequency / (double)elapsed0);
+                            framerate1 = framerate0;
+                            dFramerate = framerate0;
+
+                            str = String.Format("[{0,0:000}ms]", 1000 * elapsed0 / Stopwatch.Frequency);
+                            //匿名デリゲートで現在の時間をラベルに表示する
+                            //this.Invoke(new dlgSetString(ShowLabelText), new object[] { label_frame_rate, str });
+                        }
+                        Application.DoEvents();
+                        System.Threading.Thread.Sleep(interval);
+                    }
+                    this.States = STOP;
+                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsStart, this.States });
+                    this.Invoke(new dlgSetColor(SetColor), new object[] { ObsEndButton, this.States });
+                    vi.StopDevice(DeviceID);
+                }
+            }
+            */
+        }
+        //
+        // アナログ画像保存
+        //
+        
+        private void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            Mat image = (Mat)e.UserState;
+            //Cv2.Split(image, imgdata.img);//, null, null, null);
+            var channels  = Cv2.Split(image);//, imgdata.img);//, null, null, null);
+
+            // 表示画像反転 実装場所　要検討
+            if (appSettings.FlipOn)
+            {
+                if (appSettings.Flipmode == OpenCvSharp.FlipMode.X || appSettings.Flipmode == OpenCvSharp.FlipMode.Y)
+                {
+                    Cv2.Flip(imgdata.img, imgdata.img, appSettings.Flipmode);
+                }
+            }
+
+            // MT2 CCD Hot pixel (2015/5/16)
+            ccd_defect_correct(452, 272);
+            ccd_defect_correct(396, 330);
+            ccd_defect_correct(397, 330);
+            ccd_defect_correct(398, 330);
+            ccd_defect_correct(293, 433);
+            ccd_defect_correct(292, 433);
+            ccd_defect_correct(169, 408);
+            ccd_defect_correct(107, 303);
+            ccd_defect_correct(52, 320);
+            ccd_defect_correct(53, 320);
+            ccd_defect_correct(26, 340);
+            ccd_defect_correct(27, 191);
+            ccd_defect_correct(28, 191);
+            ccd_defect_correct(553, 243);
+            ccd_defect_correct(554, 243);
+            ccd_defect_correct(555, 243);
+            ccd_defect_correct(556, 243);
+            ccd_defect_correct(624, 252);
+            ccd_defect_correct(220, 41);
+
+            ++frame_id;
+            //detect();
+            imgdata_push_FIFO();
+
+            if (checkBoxDispAvg.Checked == true)
+            {
+                Cv2.AccumulateWeighted(imgdata.img, imgAvg, 0.1, null);// .RunningAvg(imgdata.img, imgAvg, 0.1);
+                //Cv.ShowImage("Video", imgAvg);
+            }
+        }
         #endregion
     }
 }

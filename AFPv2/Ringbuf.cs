@@ -59,7 +59,7 @@ namespace AFPv2
             id = 0;
             detect_mode = 0;
             t = DateTime.Now;
-            img = null;// new mat(w, h, MatType.CV_8U, 1);
+            img = null;// new mat(h,w, MatType.CV_8U, 1);
             ImgSaveFlag = false;
             gx = gy = vmax = 0.0;
             kgx = kgy = kvx = kvy = 0.0;
@@ -75,7 +75,7 @@ namespace AFPv2
             detect_mode = 0;
             t = DateTime.Now;
             img = null;
-            //img = new mat(w, h, MatType.CV_8U, 1);
+            //img = new mat(h,w, MatType.CV_8U, 1);
             ImgSaveFlag = false;
             gx = gy = vmax = 0.0;
             kgx = kgy = kvx = kvy = 0.0;
@@ -83,9 +83,9 @@ namespace AFPv2
             blobs = new CvBlobs();
             udpkv1 = new Udp_kv();
         }
-        public void init(Int32 w, Int32 h)
+        public void init(Int32 wi, Int32 he)
         {
-            img = new Mat(w, h, MatType.CV_8U, 1); // MatType.CV_8U, 1);
+            img = new Mat(he, wi, MatType.CV_8U, 1); // MatType.CV_8U, 1); Matは逆順 Mat(height, width, 
         }
     }
     /// <summary>
@@ -149,8 +149,8 @@ namespace AFPv2
         public int bg_interval { get; set; } // background image interval 1:all frame 2:一つおき
 
         Mat imgR;
-        //mat imgBGR = new Mat(640, 480, MatType.CV_8U, 3);
-        //Mat imgR = new Mat(640, 480, MatType.CV_8U, 1);
+        //mat imgBGR = new Mat(480, 640, MatType.CV_8U, 3);
+        //Mat imgR = new Mat(480, 640, MatType.CV_8U, 1);
         //CvFont font = new CvFont(FontFace.HersheyComplex, 0.5, 0.5);
         VIDEO_DATA vd = new VIDEO_DATA();
         StreamWriter writer;//= new StreamWriter(@"Test.txt", true, System.Text.Encoding.GetEncoding("shift_jis"));
@@ -179,18 +179,18 @@ namespace AFPv2
             for (int i = 0; i < capacity; i++)
             {
                 //this.data[i] = new ImageData(width,height) ;
-                this.img[i]  = new Mat(width, height, MatType.CV_8U, 1);
+                this.img[i]  = new Mat(height, width, MatType.CV_8U, 1);
             }
             this.top = this.bottom = 0;
             this.mask = capacity - 1;
-            this.imgR = new Mat(width, height, MatType.CV_8U, 1);
+            this.imgR = new Mat(height, width, MatType.CV_8U, 1);
 
             //this.rect = new CvRect(new CvPoint( 256, 256);
             Sub_height = 256;
             Sub_width = 256;
-            this.sub_image = new Mat(Sub_width, Sub_height, MatType.CV_8U, 1);
+            this.sub_image = new Mat(Sub_height, Sub_width,  MatType.CV_8U, 1);
             bg_interval = 25;
-            this.background_image = new Mat(width, height, MatType.CV_32F, 1);
+            this.background_image = new Mat(height, width, MatType.CV_32F, 1);
         }
 
         /// <summary>
@@ -212,16 +212,16 @@ namespace AFPv2
             this.data = new ImageData[capacity];
             this.img = new Mat[capacity];
             for (int i = 0; i < capacity; i++)
-                this.img[i] = new Mat(width, height, MatType.CV_8U, 1); //1
+                this.img[i] = new Mat(height, width, MatType.CV_8U, 1); //1
             this.top = this.bottom = 0;
             this.mask = capacity - 1;
-            this.imgR = new Mat(width, height, MatType.CV_8U, 1);
+            this.imgR = new Mat(height, width, MatType.CV_8U, 1);
 
             Sub_height = 256;
             Sub_width = 256;
-            this.sub_image = new Mat(Sub_width, Sub_height, MatType.CV_8U, 1);
+            this.sub_image = new Mat(Sub_height, Sub_width,  MatType.CV_8U, 1);
             bg_interval = 25;
-            this.background_image = new Mat(width, height, MatType.CV_32F, 1);
+            this.background_image = new Mat(height, width, MatType.CV_32F, 1);
         }
 
 
@@ -346,7 +346,7 @@ namespace AFPv2
             }
             Mat[] img = new Mat[this.data.Length * 2];
             for (i = 0; i < this.data.Length * 2; i++)
-                this.img[i] = new Mat(Width, Height, MatType.CV_8U, 1);
+                this.img[i] = new Mat(Height, Width,  MatType.CV_8U, 1);
             i = 0;
             foreach (Mat elem in this)
             {
@@ -406,7 +406,7 @@ namespace AFPv2
         /// 先頭に新しい要素を追加。
         /// </summary>
         /// <param name="elem">追加する要素</param>
-        public void InsertFirst(ImageData elem)
+        public void InsertFirst(ref ImageData elem)
         {
             run_ave(elem);
             if (this.Count >= this.data.Length - 1)
@@ -554,8 +554,11 @@ namespace AFPv2
         public void VideoWriterInit(string fn)
         {
             int codec = FourCC.DIB; // Cv.FOURCC('D', 'I', 'B', ' ');  // 0; //非圧縮avi
-            //this.vw = new CvVideoWriter(fn, codec, 29.97, new CvSize(this.width, this.height), true); //color
-            this.vw = new VideoWriter(fn, codec, 29.97, new Size(Width, Height), false); //mono
+                                    //this.vw = new CvVideoWriter(fn, codec, 29.97, new CvSize(this.width, this.height), true); //color
+            //this.vw = new VideoWriter(fn, FourCC.DIB, 30, new Size(Width, Height), false); //mono NG ???
+//            this.vw = new VideoWriter(fn, VideoCaptureAPIs.FFMPEG, FourCC.FromFourChars('U','L','R','G'), 29.97, new Size(Width, Height), false); //UtVideo mono OK
+            this.vw = new VideoWriter(fn, VideoCaptureAPIs.FFMPEG, FourCC.FromFourChars('U', 'M', 'R', 'G'), 29.97, new Size(Width, Height), false); //UtVideo T2 mono OK
+            //this.vw = new VideoWriter(fn, FourCC.XVID, 30, new Size(Width, Height), false); //mono OK
             fn += this.data[(this.bottom - 1) & this.mask].t.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}", NoCapDev) + ".avi";
             //this.writer = new StreamWriter( this.data[(this.bottom - 1) & this.mask].t.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}", NoCapDev) + ".txt", true, System.Text.Encoding.GetEncoding("shift_jis"));
             save_frame_count = 0;
@@ -628,19 +631,25 @@ namespace AFPv2
 
             Cv2.CopyTo(this.img[this.bottom], imgR);
 
+            //String filename = "FifoImg-" + vd.id + ".jpg";
+            //imgR.SaveImage(filename);
+
             //String str = String.Format("ID:{0,6:D1} ", this.data[this.bottom].id) + this.data[this.bottom].t.ToString("yyyyMMdd_HHmmss_fff") ;
-            //imgR.PutText(str, new CvPoint(6, 14), font, new CvColor(0, 100, 120)); 
+            //imgR.PutText(str, new CvPoint(6, 14), font, new Scalar(0, 100, 120)); 
             //Cv2.PutText(img, "English!!", new OpenCvSharp.Point(10, 180), HersheyFonts.HersheyComplexSmall, 1, new Scalar(255, 0, 255), 1, LineTypes.AntiAlias);
 
 
             Marshal.StructureToPtr(vd, imgR.Data, false);
 
+            //filename = "FifoImg-" + vd.id + "vd.jpg";
+            //imgR.SaveImage(filename);
+
             //String str = String.Format("ID:{0,10:D1} ", this.data[this.bottom].id) + this.data[this.bottom].t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F1})", gx, gy, vmax);
             //if (this.data[this.bottom].ImgSaveFlag) str += " True";
             //Cv.CvtColor(this.img[this.bottom], imgGBR, ColorConversion.GrayToBgr);
             //3    Cv.Copy(this.img[this.bottom], imgGBR); //3
-            //imgGBR.PutText(str, new CvPoint(6, 14) , font, new CvColor(0, 100, 100));
-            //imgGBR.Circle(new CvPoint((int)(gx+0.5),(int)(gy+0.5)), 15, new CvColor(0, 100, 255));
+            //imgGBR.PutText(str, new CvPoint(6, 14) , font, new Scalar(0, 100, 100));
+            //imgGBR.Circle(new CvPoint((int)(gx+0.5),(int)(gy+0.5)), 15, new Scalar(0, 100, 255));
 
             vw.Write(imgR);
             //writer.WriteLine("{0} {1} {2}  ", vd.id, vd.kgx, vd.kgy);

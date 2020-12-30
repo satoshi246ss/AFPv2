@@ -7,7 +7,7 @@ using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
 
-namespace MT3
+namespace AFPv2
 {
     partial class Form1
     {
@@ -26,37 +26,41 @@ namespace MT3
 
             #region 位置検出1(MaxMin)
             // Mask update
-            if (imgdata.img.ID % 30 == 0)
+            if (imgdata.id % 30 == 0)
             {
-                using (IplImage img_avg = img_mask.Clone())
+                //using (Mat img_avg = img_mask.Clone())
                 { 
                 try
                 {
-                        double gain = 1.0;
-                        double offset = 0;//-8;
+                        double gain   = 1.0;
+                        double offset = 0.0;//-8;
                         double star_thres = 32;
-                        Cv.Min(imgdata.img, img_mask, img2); //fixed Mask
+                 //       Cv2.Min(imgdata.img, img_mask, img2); //fixed Mask
                         //Cv.Sub(imgdata.img, img_dark8, img2);
                         //Cv.ConvertScale(imgAvg, img_avg, gain, offset);
-                        Cv.ConvertScale(imgAvg, img_mask2, gain, offset);
-                        Cv.Sub(img_mask2, img_dark8, img_avg); //AOI
-                        using (IplImage binary = img_mask2.Clone())
-                        using (IplImage binaryAdaptive = img_mask2.Clone())
+                        img_mask2 = imgAvg.ConvertScaleAbs(gain, offset);
+                        //using (var img_avg = img_mask2 - img_dark8)
+                        using (var img_avg = img_mask2.Clone())
+                        using (Mat binary = img_mask2.Clone())
+                        using (Mat binaryAdaptive = img_mask2.Clone())
                         {
-                            Cv.Threshold(img_avg, binary, star_thres, 255, ThresholdType.BinaryInv);
-                            Cv.AdaptiveThreshold(img_avg, binaryAdaptive, 255,
-                                AdaptiveThresholdType.GaussianC, ThresholdType.Binary, 19, star_adaptive_threshold);// 9x9 16ms
+                            Cv2.Threshold(img_avg, binary, star_thres, 255, ThresholdTypes.BinaryInv);// 4ms
+                            Cv2.AdaptiveThreshold(img_avg, binaryAdaptive, 255,
+                                AdaptiveThresholdTypes.GaussianC, ThresholdTypes.Binary, 19, star_adaptive_threshold);// 9x9 53ms
 
                             //cvwin.Image = binaryAdaptive;
-                            Cv.Min(binaryAdaptive, binary, binaryAdaptive);
+                            Cv2.Min(binaryAdaptive, binary, binaryAdaptive);
                             //cvwin.Image = binary;
-                            Cv.Min(img_mask, binaryAdaptive, img_mask2);
-                            cvwin.Image = img_mask2;
-                            Cv.Sub(imgdata.img, img_avg, img2);
-                            cvwin2.Image = img2;
+                            Cv2.Min(img_mask, binaryAdaptive, img_mask2);
+                            //cvwin.Image = img_mask2;
+                            img2 = imgdata.img - img_avg; // Cv2.Sub(imgdata.img, img_avg, img2);
+                            //cvwin.Image = img2;
+
+                            //Cv2.ImShow("binaryAdaptive", binaryAdaptive);
+                            //Cv2.ImShow("binary", binary);
+                            //Cv2.ImShow("img-avg", img2.PyrDown().PyrDown());
                         }
-                    
-                } //  ms
+                    } //  ms
                 catch (KeyNotFoundException)
                 {
                     MessageBox.Show("KeyNotFoundException:211a");
@@ -66,10 +70,10 @@ namespace MT3
             try
             {
                 double minv;
-                CvPoint minloc, maxloc;
+                Point minloc, maxloc;
                 //Cv.Smooth(imgdata.img, img2, SmoothType.Median, 5, 0, 0, 0);
                 //Cv.Threshold(img2, img2, appSettings.ThresholdBlob, 255, ThresholdType.Binary); //2ms
-                Cv.MinMaxLoc(img2, out minv, out max_val, out minloc, out maxloc, img_mask2);
+                Cv2.MinMaxLoc(img2, out minv, out max_val, out minloc, out maxloc, img_mask2);
                 gx = maxloc.X; gy = maxloc.Y;
                 //Cv.Threshold(imgdata.img, img2, appSettings.ThresholdBlob, 255, ThresholdType.Binary); //2ms  fishはマスクが必要
                 //blobs.Label(img2); //3ms
@@ -87,7 +91,7 @@ namespace MT3
                 //Cv.Smooth(imgdata.img, img2, SmoothType.Median, 5, 0, 0, 0);
                 //Cv.Threshold(img2, img2, appSettings.ThresholdBlob, 255, ThresholdType.Binary); //2ms
                 //Cv.Min(imgdata.img, img_mask, img2);
-                Cv.Threshold(imgdata.img, img2, appSettings.ThresholdBlob, 255, ThresholdType.Binary); //2ms  fishはマスクが必要
+                Cv2.Threshold(imgdata.img, img2, appSettings.ThresholdBlob, 255, ThresholdTypes.Binary); //2ms  fishはマスクが必要
                 blobs.Label(img2); //3ms
             }//8ms
             catch (KeyNotFoundException)
@@ -153,20 +157,20 @@ namespace MT3
                 }
 
                 // 観測値(kalman)
-                measurement.Set2D(0, 0, (float)(gx - xoa)); //2ms
-                measurement.Set2D(1, 0, (float)(gy - yoa)); //7ms
+                measurement.Set<double>(0, 0, (float)(gx - xoa)); //2ms
+                measurement.Set<double>(1, 0, (float)(gy - yoa)); //7ms
                 if (kalman_id++ == 0)
                 {
                     // 初期値設定
                     double errcov = 1.0;
-                    kalman.StatePost.Set1D(0, measurement.Get1D(0));
-                    kalman.StatePost.Set1D(1, measurement.Get1D(1));
-                    Cv.SetIdentity(kalman.ErrorCovPost, Cv.RealScalar(errcov));
+                    kalman.StatePost.Set(0, measurement.At<double>(0));
+                    kalman.StatePost.Set(1, measurement.At<double>(1));
+                    Cv2.SetIdentity(kalman.ErrorCovPost, new Scalar(errcov));
                 }//2ms
                 // 修正フェーズ(kalman)
                 try
                 {
-                    correction = Cv.KalmanCorrect(kalman, measurement);
+                    correction = kalman.Correct( measurement );
                 }
                 catch (KeyNotFoundException)
                 {
@@ -176,11 +180,11 @@ namespace MT3
                 // 予測フェーズ(kalman)
                 try
                 {
-                    prediction = Cv.KalmanPredict(kalman);
-                    kgx = prediction.DataArraySingle[0] + xoa;
-                    kgy = prediction.DataArraySingle[1] + yoa;
-                    kvx = prediction.DataArraySingle[2];
-                    kvy = prediction.DataArraySingle[3];
+                    prediction = kalman.Predict();
+                    kgx = prediction.At<double>(0,0) + xoa;
+                    kgy = prediction.At<double>(0,1) + yoa;
+                    kvx = prediction.At<double>(0,2);
+                    kvy = prediction.At<double>(0,3);
                 } //1ms
                 catch (KeyNotFoundException)
                 {
@@ -302,20 +306,19 @@ namespace MT3
                 // IDS
                 if (cam_maker == Camera_Maker.IDS)
                 {
-
-                    statusRet = cam.Timing.Exposure.Get(out gx);
-                    if (gx > set_exposure - 1)
-                        statusRet = cam.Timing.Exposure.Set(set_exposure1);
-                    else
-                        statusRet = cam.Timing.Exposure.Set(set_exposure);
+                  //  statusRet = cam.Timing.Exposure.Get(out gx);
+                  //  if (gx > set_exposure - 1)
+                  //      statusRet = cam.Timing.Exposure.Set(set_exposure1);
+                  //  else
+                  //      statusRet = cam.Timing.Exposure.Set(set_exposure);
                 }
             }
         }
         public void SaveAvgImage()
         {
-            using (IplImage img_avg = img_mask.Clone())
+            using (Mat img_avg = img_mask.Clone())
             {
-                Cv.ConvertScale(imgAvg, img_avg, 1.0, 0.0);
+                Cv2.ConvertScaleAbs(imgAvg, img_avg, 1.0, 0.0);
                 img_avg.SaveImage("AvgImage.png");
             }
         }
@@ -328,32 +331,32 @@ namespace MT3
         {
             // 初期化(kalman)
             kalman_id = 0;
-            Cv.SetIdentity(kalman.MeasurementMatrix, Cv.RealScalar(1.0));
-            Cv.SetIdentity(kalman.ProcessNoiseCov, Cv.RealScalar(1e-4));
-            Cv.SetIdentity(kalman.MeasurementNoiseCov, Cv.RealScalar(0.001));
-            Cv.SetIdentity(kalman.ErrorCovPost, Cv.RealScalar(1.0));
-            measurement.Zero();
+            Cv2.SetIdentity(kalman.MeasurementMatrix, new Scalar(1.0));
+            Cv2.SetIdentity(kalman.ProcessNoiseCov, new Scalar(1e-4));
+            Cv2.SetIdentity(kalman.MeasurementNoiseCov, new Scalar(0.001));
+            Cv2.SetIdentity(kalman.ErrorCovPost, new Scalar(1.0));
+            measurement.SetTo(new Scalar(0.0));
 
             // 等速直線運動モデル(kalman)
-            kalman.TransitionMatrix.Set2D(0, 0, 1.0f);
-            kalman.TransitionMatrix.Set2D(0, 1, 0.0f);
-            kalman.TransitionMatrix.Set2D(0, 2, 1.0f);
-            kalman.TransitionMatrix.Set2D(0, 3, 0.0f);
+            kalman.TransitionMatrix.Set<double>(0, 0, 1.0f);
+            kalman.TransitionMatrix.Set<double>(0, 1, 0.0f);
+            kalman.TransitionMatrix.Set<double>(0, 2, 1.0f);
+            kalman.TransitionMatrix.Set<double>(0, 3, 0.0f);
 
-            kalman.TransitionMatrix.Set2D(1, 0, 0.0f);
-            kalman.TransitionMatrix.Set2D(1, 1, 1.0f);
-            kalman.TransitionMatrix.Set2D(1, 2, 0.0f);
-            kalman.TransitionMatrix.Set2D(1, 3, 1.0f);
+            kalman.TransitionMatrix.Set<double>(1, 0, 0.0f);
+            kalman.TransitionMatrix.Set<double>(1, 1, 1.0f);
+            kalman.TransitionMatrix.Set<double>(1, 2, 0.0f);
+            kalman.TransitionMatrix.Set<double>(1, 3, 1.0f);
 
-            kalman.TransitionMatrix.Set2D(2, 0, 0.0f);
-            kalman.TransitionMatrix.Set2D(2, 1, 0.0f);
-            kalman.TransitionMatrix.Set2D(2, 2, 1.0f);
-            kalman.TransitionMatrix.Set2D(2, 3, 0.0f);
+            kalman.TransitionMatrix.Set<double>(2, 0, 0.0f);
+            kalman.TransitionMatrix.Set<double>(2, 1, 0.0f);
+            kalman.TransitionMatrix.Set<double>(2, 2, 1.0f);
+            kalman.TransitionMatrix.Set<double>(2, 3, 0.0f);
 
-            kalman.TransitionMatrix.Set2D(3, 0, 0.0f);
-            kalman.TransitionMatrix.Set2D(3, 1, 0.0f);
-            kalman.TransitionMatrix.Set2D(3, 2, 0.0f);
-            kalman.TransitionMatrix.Set2D(3, 3, 1.0f);
+            kalman.TransitionMatrix.Set<double>(3, 0, 0.0f);
+            kalman.TransitionMatrix.Set<double>(3, 1, 0.0f);
+            kalman.TransitionMatrix.Set<double>(3, 2, 0.0f);
+            kalman.TransitionMatrix.Set<double>(3, 3, 1.0f);
         }
 
     }
