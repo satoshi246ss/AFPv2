@@ -1926,6 +1926,58 @@ namespace AFPv2
             }
         }
         #endregion
+        #region アナログキャプチャー
+        //
+        // アナログ画像保存
+        //
+        /*
+        private void worker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            IplImage image = (IplImage)e.UserState;
+            Cv.Split(image, imgdata.img, null, null, null);
+
+            // 表示画像反転 実装場所　要検討
+            if (appSettings.FlipOn)
+            {
+                if (appSettings.Flipmode == OpenCvSharp.FlipMode.X || appSettings.Flipmode == OpenCvSharp.FlipMode.Y)
+                {
+                    Cv.Flip(imgdata.img, imgdata.img, appSettings.Flipmode);
+                }
+            }
+
+            // MT2 CCD Hot pixel (2015/5/16)
+            ccd_defect_correct(452, 272);
+            ccd_defect_correct(396, 330);
+            ccd_defect_correct(397, 330);
+            ccd_defect_correct(398, 330);
+            ccd_defect_correct(293, 433);
+            ccd_defect_correct(292, 433);
+            ccd_defect_correct(169, 408);
+            ccd_defect_correct(107, 303);
+            ccd_defect_correct(52, 320);
+            ccd_defect_correct(53, 320);
+            ccd_defect_correct(26, 340);
+            ccd_defect_correct(27, 191);
+            ccd_defect_correct(28, 191);
+            ccd_defect_correct(553, 243);
+            ccd_defect_correct(554, 243);
+            ccd_defect_correct(555, 243);
+            ccd_defect_correct(556, 243);
+            ccd_defect_correct(624, 252);
+            ccd_defect_correct(220, 41);
+
+            ++frame_id;
+            detect();
+            imgdata_push_FIFO();
+
+            if (checkBoxDispAvg.Checked == true)
+            {
+                Cv.RunningAvg(imgdata.img, imgAvg, 0.1);
+                //Cv.ShowImage("Video", imgAvg);
+            }
+        }
+        */
+        #endregion
     }
 }
 #endregion

@@ -1250,7 +1250,6 @@ namespace AFPv2
             }
         }
 
-
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
             string s = string.Format("(x,y)=({0},{1})\n", e.X, e.Y);
