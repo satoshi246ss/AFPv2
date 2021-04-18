@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using OpenCvSharp;
+using OpenCvSharp.XFeatures2D;
 using OpenCvSharp.Blob;
 //using VideoInputSharp;
 using System.Diagnostics;
@@ -1306,6 +1307,42 @@ namespace AFPv2
         private void ButtonSaveEnd_Click_1(object sender, EventArgs e)
         {
 
+        }
+
+        private void button_test_Click(object sender, EventArgs e)
+        {
+            SimpleBlobDetector.Params param = new SimpleBlobDetector.Params();
+            param.MaxArea = 100000;
+           // SimpleBlobDetector detector = SimpleBlobDetector.Create(param);
+
+            // Detect blobs.
+
+            //string fn = @"C: \Users\root\Pictures\Screenpresso\2021 - 03 - 07_12h15_31.png";
+            string fn = @"C:\Users\root\Downloads\blob_test.jpeg";
+            using (Mat img1 = new Mat(fn))
+            {
+                // detecting keypoints
+                // FastFeatureDetector, StarDetector, SIFT, SURF, ORB, BRISK, MSER, GFTTDetector, DenseFeatureDetector, SimpleBlobDetector
+                // SURF = Speeded Up Robust Features
+                //var detector = SURF.Create(hessianThreshold: 400); //A good default value could be from 300 to 500, depending from the image contrast.
+                var detector = SimpleBlobDetector.Create(param);
+                var keypoints1 = detector.Detect(img1);
+                
+                KeyPoint maxkey = new KeyPoint( new Point2f(0,0),-1);
+                foreach (var keyPoint in keypoints1)
+                {
+                    if (maxkey.Size < keyPoint.Size) maxkey = keyPoint;
+                    Console.WriteLine("X: {0}, Y: {1}", keyPoint.Pt.X, keyPoint.Pt.Y);
+                }
+                Console.WriteLine("MAX X: {0}, Y: {1} Size: {2}", maxkey.Pt.X, maxkey.Pt.Y, maxkey.Size);
+
+
+                Cv2.DrawKeypoints(img1, keypoints1, img1,null,DrawMatchesFlags.DrawRichKeypoints);
+                Cv2.ImShow("mat2", img1);
+                System.Threading.Thread.Sleep(3000);
+            }
+
+         
         }
     }
 }

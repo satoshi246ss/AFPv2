@@ -61,6 +61,7 @@
             this.checkBox_WideDR = new System.Windows.Forms.CheckBox();
             this.numericUpDownStarCount = new System.Windows.Forms.NumericUpDown();
             this.button_mask = new System.Windows.Forms.Button();
+            this.button_test = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).BeginInit();
@@ -324,15 +325,26 @@
             this.button_mask.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.button_mask.Location = new System.Drawing.Point(12, 787);
             this.button_mask.Name = "button_mask";
-            this.button_mask.Size = new System.Drawing.Size(75, 23);
+            this.button_mask.Size = new System.Drawing.Size(103, 37);
             this.button_mask.TabIndex = 19;
             this.button_mask.Text = "Mask";
             this.button_mask.UseVisualStyleBackColor = true;
             this.button_mask.Click += new System.EventHandler(this.buttonMakeDark_Click);
             // 
+            // button_test
+            // 
+            this.button_test.Location = new System.Drawing.Point(13, 851);
+            this.button_test.Name = "button_test";
+            this.button_test.Size = new System.Drawing.Size(102, 56);
+            this.button_test.TabIndex = 20;
+            this.button_test.Text = "test";
+            this.button_test.UseVisualStyleBackColor = true;
+            this.button_test.Click += new System.EventHandler(this.button_test_Click);
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1565, 1119);
+            this.Controls.Add(this.button_test);
             this.Controls.Add(this.button_mask);
             this.Controls.Add(this.numericUpDownStarCount);
             this.Controls.Add(this.checkBox_WideDR);
@@ -399,6 +411,7 @@
         private System.Windows.Forms.NumericUpDown numericUpDownStarCount;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabelTemp;
         private System.Windows.Forms.Button button_mask;
+        private System.Windows.Forms.Button button_test;
     }
 }
 
