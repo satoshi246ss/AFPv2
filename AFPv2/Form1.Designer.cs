@@ -62,6 +62,7 @@
             this.numericUpDownStarCount = new System.Windows.Forms.NumericUpDown();
             this.button_mask = new System.Windows.Forms.Button();
             this.button_test = new System.Windows.Forms.Button();
+            this.timerObsOnOff = new System.Windows.Forms.Timer(this.components);
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).BeginInit();
@@ -343,6 +344,12 @@
             this.button_test.UseVisualStyleBackColor = true;
             this.button_test.Click += new System.EventHandler(this.button_test_Click);
             // 
+            // timerObsOnOff
+            // 
+            this.timerObsOnOff.Enabled = true;
+            this.timerObsOnOff.Interval = 5000;
+            this.timerObsOnOff.Tick += new System.EventHandler(this.timerObsOnOff_Tick);
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1565, 1119);
@@ -417,6 +424,7 @@
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabelTemp;
         private System.Windows.Forms.Button button_mask;
         private System.Windows.Forms.Button button_test;
+        private System.Windows.Forms.Timer timerObsOnOff;
     }
 }
 

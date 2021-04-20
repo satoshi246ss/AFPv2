@@ -743,6 +743,9 @@ namespace AFPv2
  
         private void timerObsOnOff_Tick(object sender, EventArgs e)
         {
+            diskspace = cDrive.TotalFreeSpace;
+            MTmon_Data_Send(sender);
+ 
             TimeSpan nowtime = DateTime.Now - DateTime.Today;
             //TimeSpan endtime = new TimeSpan(7, 0, 0);
             //TimeSpan starttime = new TimeSpan(16,30, 0);
@@ -779,8 +782,7 @@ namespace AFPv2
 
         private void timer1min_Tick(object sender, EventArgs e)
         {
-            diskspace = cDrive.TotalFreeSpace;
-
+ 
             //　PGR ポスト処理不具合暫定対応用
             if (States == RUN && appSettings.PostSaveProcess)
             {
