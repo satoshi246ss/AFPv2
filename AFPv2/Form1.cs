@@ -1135,7 +1135,7 @@ namespace AFPv2
             toolStripStatusLabelExposure.Text = "Expo: " + (dExpo / 1000.0).ToString("00.00") + "[ms]";
             toolStripStatusLabelGain.Text = "Gain: " + igain.ToString("00");
             toolStripStatusLabelFailed.Text = "Failed U:" + frame_underrun.ToString("0000") + " S:" + frame_shoved.ToString("0000") + " D:" + frame_dropped.ToString("0000");
-            toolStripStatusLabelTemp.Text = "Temp: " + pgr_temparature.ToString("00.0");
+            toolStripStatusLabelTemp.Text = "Temp: " + pgr_temparature.ToString("00.0")+"℃  KVAz,Alt:"+udpkv.kvaz.ToString("000") +","+udpkv.kvalt.ToString("00") ;
 
             //label_frame_rate.Text = pgr_BusSpeed().ToString();
 

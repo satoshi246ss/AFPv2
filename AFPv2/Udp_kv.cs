@@ -46,7 +46,7 @@ namespace AFPv2
         int kalman_id = 0;
         public double kvaz, kvalt;
         // 観測値(kalman)
-        Mat measurement = new Mat(1, 2, MatType.CV_32FC1);
+        Mat measurement = new Mat(2, 1, MatType.CV_32FC1);
         Mat correction;
         Mat prediction;
 
@@ -503,8 +503,8 @@ namespace AFPv2
             correction = kv_kalman.Correct(measurement);// correction = cv.KalmanCorrect(kv_kalman, measurement);
             // 予測フェーズ(kalman)
             prediction = kv_kalman.Predict();// Cv.KalmanPredict(kv_kalman);
-            kvaz  = prediction.At<double>(0);// .DataArraySingle[0]; //ans           byte b = mat.At<byte>(y, x);
-            kvalt = prediction.At<double>(1);// .DataArraySingle[1]; //ans
+            kvaz  = prediction.At<float>(0);// .DataArraySingle[0]; //ans           byte b = mat.At<byte>(y, x);
+            kvalt = prediction.At<float>(1);// .DataArraySingle[1]; //ans
             //kvx = prediction.At<double>(2);// .DataArraySingle[2];
             //kvy = prediction.At<double>(3);// .DataArraySingle[3];
         }
