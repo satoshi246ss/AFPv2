@@ -92,21 +92,26 @@ namespace AFPv2
                 //Cv.Threshold(img2, img2, appSettings.ThresholdBlob, 255, ThresholdType.Binary); //2ms
                 //Cv.Min(imgdata.img, img_mask, img2);
                 Cv2.Threshold(imgdata.img, img2, appSettings.ThresholdBlob, 255, ThresholdTypes.Binary); //2ms  fishはマスクが必要
-                blobs.Label(img2); //3ms
+                SimpleBlobDetector.Params param = new SimpleBlobDetector.Params();
+                param.MaxArea = 100000;
+
+                var detector = SimpleBlobDetector.Create(param);
+                var keypoints1 = detector.Detect(img2);
+                KeyPoint maxkey = new KeyPoint(new Point2f(0, 0), -1);
+                foreach (var keyPoint in keypoints1)
+                {
+                    if (maxkey.Size < keyPoint.Size) maxkey = keyPoint;
+                    Console.WriteLine("X: {0}, Y: {1}", keyPoint.Pt.X, keyPoint.Pt.Y);
+                }
+                Console.WriteLine("MAX X: {0}, Y: {1} Size: {2}", maxkey.Pt.X, maxkey.Pt.Y, maxkey.Size);
+                maxKeyPoint = maxkey;
+                //blobs.Label(img2); //3ms
             }//8ms
             catch (KeyNotFoundException)
             {
                 MessageBox.Show("KeyNotFoundException:211");
             }
           if (appSettings.UseDetect) return;//必ずreturn
-            try
-            {
-                maxBlob = blobs.LargestBlob();
-            }//1ms
-            catch (KeyNotFoundException)
-            {
-                MessageBox.Show("KeyNotFoundException:212");
-            }
 
             try
             {
@@ -119,7 +124,8 @@ namespace AFPv2
                 if (blobs.Count > 0)
                 {
                     max_label = pos_mes.mesure(blobs); //4ms
-                } 
+                    //max_label = pos_mes.mesure(keyPoints1); //4ms
+                }
             }//1ms
             catch (KeyNotFoundException)
             {

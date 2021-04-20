@@ -166,7 +166,7 @@ namespace AFPv2
         double set_exposure1 = 0.2; // [ms]
  
         Mat img_dmk3, img_dmk, img2 , imgAvg, img_ueye_aoi, img_mask, img_mask2, img_dark8;
-        CvBlobs blobs = new CvBlobs();
+ 
         //Font font = new CvFont(FontFace.HersheyComplex, 0.50, 0.50);
         //Font font_big = new CvFont(FontFace.HersheyComplex, 1.0, 1.0);
         //Window cvwin = new CvWindow("AVR Win");
@@ -176,7 +176,9 @@ namespace AFPv2
         double gx, gy, max_val, kgx, kgy, kvx, kvy, sgx, sgy;
         Point2d max_centroid;
         int max_label;
+        CvBlobs blobs = new CvBlobs();
         CvBlob maxBlob;
+        KeyPoint maxKeyPoint;
         Rect blob_rect;
         KalmanFilter kalman = new KalmanFilter(4, 2);// Cv.CreateKalman(4, 2);
         int kalman_id = 0;

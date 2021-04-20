@@ -24,6 +24,53 @@ namespace AFPv2
         /// <remarks>
         /// 最適blobの選定（areaの大きさと前回からの距離）
         /// </remarks>
+        public KeyPoint mesure(KeyPoint[] keyPoints)
+        {
+            if (keyPoints.Count() == 0)
+            {
+                return keyPoints[0];
+            }
+            Point2d pos_ans = new Point2d( keyPoints[0].Pt.X, keyPoints[0].Pt.Y);
+            KeyPoint max_keyPoint = keyPoints[0];
+            distance0 = Cal_distance_const(distance_pre);
+            if (keyPoints.Count() > 1)
+            {
+                // 最適blobの選定
+                double eval, eval_max = 0;
+                foreach (var item in keyPoints)
+                {
+                    eval = position_mesure.Cal_Evaluate(new Point2d(item.Pt.X,item.Pt.Y), item.Size, pos_pre, distance0);
+                    if (eval > eval_max)
+                    {
+                        eval_max = eval;
+                        max_keyPoint = item;
+                        pos_ans = new Point2d(item.Pt.X, item.Pt.Y);
+
+                        ///Console.WriteLine("{0} | Centroid:{1} Area:{2} eval:{3}", item.Key, item.Value.Centroid, item.Value.Area, eval);
+                        //w.WriteLine("{0} {1} {2} {3} {4}", dis, dv, i, item.Key, item.Value.Area);
+                    }
+                    //sw.Stop(); t5 = 1000.0 * sw.ElapsedTicks / Stopwatch.Frequency; sw.Reset(); sw.Start();  
+                    ///Console.WriteLine(" pos_ans:{0}", pos_ans);
+                }
+            }
+            double dis = Cal_distance(pos_ans, pos_pre);
+            if (distance_pre > dis)
+            {
+                distance_pre = (1 - dist_alpha) * distance_pre + dist_alpha * dis;
+            }
+            else
+            {
+                distance_pre = dis;
+            }
+            pos_pre = pos_ans;
+            return max_keyPoint;
+        }
+        /// <summary>
+        /// 最適blobの選定
+        /// </summary>
+        /// <remarks>
+        /// 最適blobの選定（areaの大きさと前回からの距離）
+        /// </remarks>
         public int mesure(CvBlobs blobs)
         {
             if (blobs.Count == 0)

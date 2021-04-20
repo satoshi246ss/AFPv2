@@ -537,34 +537,7 @@ namespace AFPv2
 
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
         {
-            //Pid_Data_Send();
 
-            // Basler
-            if (cam_maker == Camera_Maker.Basler)
-            {
-                //if (this.checkBox_WideDR.Checked)
-                {
-                //    m_imageProvider.SetupGain(1024);
-                }
-                //pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
-                //else
-                {
-                //    m_imageProvider.SetupGain(100);
-                    //pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
-                }
-            }
-
-            // IDS
-            if (cam_maker == Camera_Maker.IDS)
-            {
-                /*  Detect()に実装
-                statusRet = cam.Timing.Exposure.Get(out gx);
-                if (gx > set_exposure - 1)
-                    statusRet = cam.Timing.Exposure.Set(set_exposure1);
-                else
-                    statusRet = cam.Timing.Exposure.Set(set_exposure);
-                */
-            }
         }
 
         private void ObsEndButton_Click(object sender, EventArgs e)

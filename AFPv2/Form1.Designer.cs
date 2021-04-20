@@ -201,6 +201,7 @@
             this.checkBoxObsAuto.TabIndex = 9;
             this.checkBoxObsAuto.Text = "checkBoxObsAuto";
             this.checkBoxObsAuto.UseVisualStyleBackColor = true;
+            this.checkBoxObsAuto.CheckedChanged += new System.EventHandler(this.checkBoxObsAuto_CheckedChanged);
             // 
             // timerWaitShutdown
             // 
@@ -288,6 +289,7 @@
             this.buttonMove.TabIndex = 14;
             this.buttonMove.Text = "Move";
             this.buttonMove.UseVisualStyleBackColor = true;
+            this.buttonMove.Click += new System.EventHandler(this.buttonMove_Click);
             // 
             // numericUpDown_daz
             // 
@@ -364,6 +366,9 @@
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.ObsStart);
             this.Name = "Form1";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
+            this.Load += new System.EventHandler(this.Form1_Load);
+            this.Shown += new System.EventHandler(this.Form1_Shown);
             this.panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).EndInit();
