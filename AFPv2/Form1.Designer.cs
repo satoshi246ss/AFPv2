@@ -58,7 +58,7 @@
             this.buttonMove = new System.Windows.Forms.Button();
             this.numericUpDown_daz = new System.Windows.Forms.NumericUpDown();
             this.numericUpDown_dalt = new System.Windows.Forms.NumericUpDown();
-            this.checkBox_WideDR = new System.Windows.Forms.CheckBox();
+            this.checkBox_DispMode = new System.Windows.Forms.CheckBox();
             this.numericUpDownStarCount = new System.Windows.Forms.NumericUpDown();
             this.button_mask = new System.Windows.Forms.Button();
             this.button_test = new System.Windows.Forms.Button();
@@ -98,7 +98,7 @@
             this.pictureBox1.Location = new System.Drawing.Point(0, 0);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(1313, 904);
-            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
             // 
@@ -134,7 +134,7 @@
             // 
             this.ShowButton.Location = new System.Drawing.Point(12, 399);
             this.ShowButton.Name = "ShowButton";
-            this.ShowButton.Size = new System.Drawing.Size(75, 23);
+            this.ShowButton.Size = new System.Drawing.Size(103, 33);
             this.ShowButton.TabIndex = 4;
             this.ShowButton.Text = "Show";
             this.ShowButton.UseVisualStyleBackColor = true;
@@ -144,7 +144,7 @@
             // 
             this.CloseButton.Location = new System.Drawing.Point(12, 450);
             this.CloseButton.Name = "CloseButton";
-            this.CloseButton.Size = new System.Drawing.Size(75, 23);
+            this.CloseButton.Size = new System.Drawing.Size(103, 45);
             this.CloseButton.TabIndex = 5;
             this.CloseButton.Text = "Close";
             this.CloseButton.UseVisualStyleBackColor = true;
@@ -184,7 +184,7 @@
             // 
             this.numericUpDownStarMin.Location = new System.Drawing.Point(124, 541);
             this.numericUpDownStarMin.Name = "numericUpDownStarMin";
-            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 19);
             this.numericUpDownStarMin.TabIndex = 8;
             // 
             // timerSavePost
@@ -198,7 +198,7 @@
             this.checkBoxObsAuto.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBoxObsAuto.Location = new System.Drawing.Point(13, 334);
             this.checkBoxObsAuto.Name = "checkBoxObsAuto";
-            this.checkBoxObsAuto.Size = new System.Drawing.Size(171, 22);
+            this.checkBoxObsAuto.Size = new System.Drawing.Size(125, 21);
             this.checkBoxObsAuto.TabIndex = 9;
             this.checkBoxObsAuto.Text = "checkBoxObsAuto";
             this.checkBoxObsAuto.UseVisualStyleBackColor = true;
@@ -214,7 +214,7 @@
             this.checkBoxDispAvg.AutoSize = true;
             this.checkBoxDispAvg.Location = new System.Drawing.Point(12, 501);
             this.checkBoxDispAvg.Name = "checkBoxDispAvg";
-            this.checkBoxDispAvg.Size = new System.Drawing.Size(167, 22);
+            this.checkBoxDispAvg.Size = new System.Drawing.Size(124, 21);
             this.checkBoxDispAvg.TabIndex = 10;
             this.checkBoxDispAvg.Text = "checkBoxDispAvg";
             this.checkBoxDispAvg.UseVisualStyleBackColor = true;
@@ -239,54 +239,60 @@
             this.toolStripStatusLabelFailed,
             this.toolStripStatusLabelGain,
             this.toolStripStatusLabelTemp});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 1087);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 1074);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1565, 32);
+            this.statusStrip1.Size = new System.Drawing.Size(1565, 45);
             this.statusStrip1.TabIndex = 13;
             this.statusStrip1.Text = "statusStrip1";
             // 
             // toolStripStatusLabelFramerate
             // 
+            this.toolStripStatusLabelFramerate.Font = new System.Drawing.Font("Yu Gothic UI", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.toolStripStatusLabelFramerate.Name = "toolStripStatusLabelFramerate";
-            this.toolStripStatusLabelFramerate.Size = new System.Drawing.Size(90, 25);
+            this.toolStripStatusLabelFramerate.Size = new System.Drawing.Size(141, 38);
             this.toolStripStatusLabelFramerate.Text = "Framerate";
             // 
             // toolStripStatusLabelExposure
             // 
+            this.toolStripStatusLabelExposure.Font = new System.Drawing.Font("Yu Gothic UI", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.toolStripStatusLabelExposure.Name = "toolStripStatusLabelExposure";
-            this.toolStripStatusLabelExposure.Size = new System.Drawing.Size(84, 25);
+            this.toolStripStatusLabelExposure.Size = new System.Drawing.Size(129, 38);
             this.toolStripStatusLabelExposure.Text = "Exposure";
             // 
             // toolStripStatusLabelID
             // 
+            this.toolStripStatusLabelID.Font = new System.Drawing.Font("Yu Gothic UI", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.toolStripStatusLabelID.Name = "toolStripStatusLabelID";
-            this.toolStripStatusLabelID.Size = new System.Drawing.Size(78, 25);
+            this.toolStripStatusLabelID.Size = new System.Drawing.Size(120, 38);
             this.toolStripStatusLabelID.Text = "FrameID";
             // 
             // toolStripStatusLabelFailed
             // 
+            this.toolStripStatusLabelFailed.Font = new System.Drawing.Font("Yu Gothic UI", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.toolStripStatusLabelFailed.Name = "toolStripStatusLabelFailed";
-            this.toolStripStatusLabelFailed.Size = new System.Drawing.Size(55, 25);
+            this.toolStripStatusLabelFailed.Size = new System.Drawing.Size(85, 38);
             this.toolStripStatusLabelFailed.Text = "failed";
             // 
             // toolStripStatusLabelGain
             // 
+            this.toolStripStatusLabelGain.Font = new System.Drawing.Font("Yu Gothic UI", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.toolStripStatusLabelGain.Name = "toolStripStatusLabelGain";
-            this.toolStripStatusLabelGain.Size = new System.Drawing.Size(53, 25);
+            this.toolStripStatusLabelGain.Size = new System.Drawing.Size(81, 38);
             this.toolStripStatusLabelGain.Text = "Gaim";
             // 
             // toolStripStatusLabelTemp
             // 
             this.toolStripStatusLabelTemp.BorderStyle = System.Windows.Forms.Border3DStyle.Sunken;
+            this.toolStripStatusLabelTemp.Font = new System.Drawing.Font("Yu Gothic UI", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.toolStripStatusLabelTemp.Name = "toolStripStatusLabelTemp";
-            this.toolStripStatusLabelTemp.Size = new System.Drawing.Size(109, 25);
+            this.toolStripStatusLabelTemp.Size = new System.Drawing.Size(168, 38);
             this.toolStripStatusLabelTemp.Text = "SensorTemp";
             // 
             // buttonMove
             // 
             this.buttonMove.Location = new System.Drawing.Point(12, 541);
             this.buttonMove.Name = "buttonMove";
-            this.buttonMove.Size = new System.Drawing.Size(75, 33);
+            this.buttonMove.Size = new System.Drawing.Size(103, 48);
             this.buttonMove.TabIndex = 14;
             this.buttonMove.Text = "Move";
             this.buttonMove.UseVisualStyleBackColor = true;
@@ -296,31 +302,34 @@
             // 
             this.numericUpDown_daz.Location = new System.Drawing.Point(124, 590);
             this.numericUpDown_daz.Name = "numericUpDown_daz";
-            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 19);
             this.numericUpDown_daz.TabIndex = 15;
             // 
             // numericUpDown_dalt
             // 
             this.numericUpDown_dalt.Location = new System.Drawing.Point(124, 632);
             this.numericUpDown_dalt.Name = "numericUpDown_dalt";
-            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 19);
             this.numericUpDown_dalt.TabIndex = 16;
             // 
-            // checkBox_WideDR
+            // checkBox_DispMode
             // 
-            this.checkBox_WideDR.AutoSize = true;
-            this.checkBox_WideDR.Location = new System.Drawing.Point(12, 719);
-            this.checkBox_WideDR.Name = "checkBox_WideDR";
-            this.checkBox_WideDR.Size = new System.Drawing.Size(92, 22);
-            this.checkBox_WideDR.TabIndex = 17;
-            this.checkBox_WideDR.Text = "WideDR";
-            this.checkBox_WideDR.UseVisualStyleBackColor = true;
+            this.checkBox_DispMode.AutoSize = true;
+            this.checkBox_DispMode.Checked = true;
+            this.checkBox_DispMode.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBox_DispMode.Location = new System.Drawing.Point(12, 719);
+            this.checkBox_DispMode.Name = "checkBox_DispMode";
+            this.checkBox_DispMode.Size = new System.Drawing.Size(81, 21);
+            this.checkBox_DispMode.TabIndex = 17;
+            this.checkBox_DispMode.Text = "DispMode";
+            this.checkBox_DispMode.UseVisualStyleBackColor = true;
+            this.checkBox_DispMode.CheckedChanged += new System.EventHandler(this.checkBox_WideDR_CheckedChanged);
             // 
             // numericUpDownStarCount
             // 
             this.numericUpDownStarCount.Location = new System.Drawing.Point(124, 674);
             this.numericUpDownStarCount.Name = "numericUpDownStarCount";
-            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 19);
             this.numericUpDownStarCount.TabIndex = 18;
             // 
             // button_mask
@@ -356,7 +365,7 @@
             this.Controls.Add(this.button_test);
             this.Controls.Add(this.button_mask);
             this.Controls.Add(this.numericUpDownStarCount);
-            this.Controls.Add(this.checkBox_WideDR);
+            this.Controls.Add(this.checkBox_DispMode);
             this.Controls.Add(this.numericUpDown_dalt);
             this.Controls.Add(this.numericUpDown_daz);
             this.Controls.Add(this.buttonMove);
@@ -419,7 +428,7 @@
         private System.Windows.Forms.Button buttonMove;
         private System.Windows.Forms.NumericUpDown numericUpDown_daz;
         private System.Windows.Forms.NumericUpDown numericUpDown_dalt;
-        private System.Windows.Forms.CheckBox checkBox_WideDR;
+        private System.Windows.Forms.CheckBox checkBox_DispMode;
         private System.Windows.Forms.NumericUpDown numericUpDownStarCount;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabelTemp;
         private System.Windows.Forms.Button button_mask;

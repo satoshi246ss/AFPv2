@@ -813,7 +813,7 @@ namespace AFPv2
 
         private void timerAutoStarData_Tick(object sender, EventArgs e)
         {
-            if (checkBox_WideDR.Checked)
+            if (checkBox_DispMode.Checked)
             {
                 buttonMove_Click(sender, e);
             }
@@ -1004,25 +1004,29 @@ namespace AFPv2
                 // Star display for Fish2
                 if (appSettings.NoCapDev == 1)
                 {
-                    int cx, cy, r_mag;
-                    for (int i = 0; i < star.Count; ++i)
+                    int cx, cy, r_mag, i;
+                    for (i = 0; i < star.Count; ++i)
                     {
                         get_star_disp_pos(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpx, out cx, out cy, out r_mag);
-                        OCPoint.X = (int)(appSettings.Xoa + cx);
-                        OCPoint.Y = (int)(appSettings.Yoa + cy);
-                        Cv2.Circle(img_dmk3, OCPoint, 2 * r_mag, new Scalar(0, 255, 0));
+                        if (cx > -99990)
+                        {
+                            OCPoint.X = (int)(appSettings.Xoa + cx);
+                            OCPoint.Y = (int)(appSettings.Yoa + cy);
+                            Cv2.Circle(img_dmk3, OCPoint, 2 * r_mag, new Scalar(0, 255, 0));
+                        }
                     }
                 }
 
                 try
                 {
                     //Cv2.ImShow("PB test", img_dmk3);//Cv2.WaitKey();
-                    Cv2.ImShow("img-avg", img2.PyrDown().PyrDown());
+                    //Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
+                    Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
                     pictureBox1.Image = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
 
-                    int fid = frame_id % 16;
-                    String filename = "pictureboxImg-" + fid + ".jpg";
-                    img_dmk3.SaveImage(filename);
+                    //int fid = frame_id % 16;
+                    //String filename = "pictureboxImg-" + fid + ".jpg";
+                    //img_dmk3.SaveImage(filename);
                 }
                 catch (System.ArgumentException ex_a)
                 {
@@ -1319,6 +1323,18 @@ namespace AFPv2
             }
 
          
+        }
+
+        private void checkBox_WideDR_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox_DispMode.Checked)
+            {
+                pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            }
+            else
+            {
+                pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+            }
         }
     }
 }

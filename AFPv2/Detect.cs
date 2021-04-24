@@ -307,7 +307,7 @@ namespace AFPv2
             fr_str = String.Format("ID:{0,5:D1} L0:{1,4:F2} L1:{2,4:F2} L2:{3,4:F2}", frame_id, lap0, lap1, lap2);
 
             // ワイドダイナミックレンジ用設定 Exp 100-1-100-1-
-            if (checkBox_WideDR.Checked)
+            if (checkBox_DispMode.Checked)
             {
                 // IDS
                 if (cam_maker == Camera_Maker.IDS)
