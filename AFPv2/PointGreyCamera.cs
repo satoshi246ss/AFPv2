@@ -52,7 +52,7 @@ namespace AFPv2
         public bool pgr_post_save = false;
 
         public IManagedCamera cam_iel;
-        public INodeMap nodeMap_iel;
+        public INodeMap nodeMap_iel, nodeMap_str;
 
         // Retrieve singleton reference to system object
         internal ManagedSystem pgr_system;// = new ManagedSystem();
@@ -400,7 +400,8 @@ namespace AFPv2
                                 else
                                     pgr_framerate = val.Value;
 
-                                ival = nodeMap_iel.GetNode<IInteger>("StreamFailedBufferCount");
+                                nodeMap_str = cam_iel.GetTLStreamNodeMap();
+                                ival = nodeMap_str.GetNode<IInteger>("StreamFailedBufferCount");
                                 if (ival == null || !ival.IsReadable)
                                 {
                                     string s = "Unable to read 'StreamFailedBufferCount' (node retrieval).\n";

@@ -1020,8 +1020,8 @@ namespace AFPv2
                 try
                 {
                     //Cv2.ImShow("PB test", img_dmk3);//Cv2.WaitKey();
-                    //Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
-                    Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
+                    Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
+                    //Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
                     pictureBox1.Image = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
 
                     //int fid = frame_id % 16;
