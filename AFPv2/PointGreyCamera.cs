@@ -47,7 +47,7 @@ namespace AFPv2
         public double pgr_image_gain { get; set; }
         public double pgr_temparature { get; set; }
         public double pgr_framerate { get; set; }
-        public uint pgr_image_frame_count { get; set; }
+        public long pgr_image_frame_count { get; set; }
         public long pgr_StreamFailedBufferCount { get; set; }
         public bool pgr_post_save = false;
 
@@ -399,6 +399,17 @@ namespace AFPv2
                                 }
                                 else
                                     pgr_framerate = val.Value;
+
+                                nodeMap_str = cam_iel.GetTLStreamNodeMap();
+                                ival = nodeMap_str.GetNode<IInteger>("StreamDeliveredFrameCount");
+                                if (ival == null || !ival.IsReadable)
+                                {
+                                    string s = "Unable to read 'StreamFailedBufferCount' (node retrieval).\n";
+                                    logger.Error(s);
+                                    Console.WriteLine(s);
+                                }
+                                else
+                                    pgr_image_frame_count = ival.Value;
 
                                 nodeMap_str = cam_iel.GetTLStreamNodeMap();
                                 ival = nodeMap_str.GetNode<IInteger>("StreamFailedBufferCount");

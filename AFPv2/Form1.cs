@@ -1100,7 +1100,7 @@ namespace AFPv2
                 //uEye.Types.CaptureStatus captureStatus;
                 //cam.Information.GetCaptureStatus(out captureStatus); //IDS ueye
                 //frame_error = (long)captureStatus.Total;
-                frame_total = (long)(pgr_image_frame_count);
+                frame_total = pgr_image_frame_count;
                 //reqFramerate = pgr_getFrameRate();
                 frame_underrun = pgr_StreamFailedBufferCount;
                 //label_frame_rate.Text = pgr_BusSpeed().ToString() + " " + ((pgr_Temperature(pgr_cam) - 2732) / 10.0).ToString();
