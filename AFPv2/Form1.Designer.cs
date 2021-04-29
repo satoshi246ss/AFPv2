@@ -102,11 +102,13 @@
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
+            this.pictureBox1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseClick);
             // 
             // richTextBox1
             // 
             this.richTextBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.richTextBox1.Font = new System.Drawing.Font("MS UI Gothic", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.richTextBox1.Location = new System.Drawing.Point(0, 901);
             this.richTextBox1.Name = "richTextBox1";
             this.richTextBox1.Size = new System.Drawing.Size(1313, 182);
@@ -202,11 +204,12 @@
             this.checkBoxObsAuto.AutoSize = true;
             this.checkBoxObsAuto.Checked = true;
             this.checkBoxObsAuto.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxObsAuto.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.checkBoxObsAuto.Location = new System.Drawing.Point(13, 334);
             this.checkBoxObsAuto.Name = "checkBoxObsAuto";
-            this.checkBoxObsAuto.Size = new System.Drawing.Size(125, 21);
+            this.checkBoxObsAuto.Size = new System.Drawing.Size(108, 24);
             this.checkBoxObsAuto.TabIndex = 9;
-            this.checkBoxObsAuto.Text = "checkBoxObsAuto";
+            this.checkBoxObsAuto.Text = "ObsAuto";
             this.checkBoxObsAuto.UseVisualStyleBackColor = true;
             this.checkBoxObsAuto.CheckedChanged += new System.EventHandler(this.checkBoxObsAuto_CheckedChanged);
             // 
@@ -218,11 +221,12 @@
             // checkBoxDispAvg
             // 
             this.checkBoxDispAvg.AutoSize = true;
+            this.checkBoxDispAvg.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.checkBoxDispAvg.Location = new System.Drawing.Point(12, 501);
             this.checkBoxDispAvg.Name = "checkBoxDispAvg";
-            this.checkBoxDispAvg.Size = new System.Drawing.Size(124, 21);
+            this.checkBoxDispAvg.Size = new System.Drawing.Size(103, 24);
             this.checkBoxDispAvg.TabIndex = 10;
-            this.checkBoxDispAvg.Text = "checkBoxDispAvg";
+            this.checkBoxDispAvg.Text = "DispAvg";
             this.checkBoxDispAvg.UseVisualStyleBackColor = true;
             // 
             // label_X2Y2

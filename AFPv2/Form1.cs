@@ -686,7 +686,7 @@ namespace AFPv2
             star_adaptive_threshold = (int)numericUpDownStarMin.Value; // kenyou  0-5 月、惑星  6:シリウス　7:ベガ
 
             // Make Mask
-            StreamReader sr = new StreamReader(@"mask_data.csv");
+            StreamReader sr = new StreamReader(@"../../mask_data.csv");
             {
                 // 末尾まで繰り返す
                 while (!sr.EndOfStream)
@@ -1377,6 +1377,23 @@ namespace AFPv2
             else
             {
                 pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+            }
+        }
+
+        private void pictureBox1_MouseClick(object sender, MouseEventArgs e)
+        {
+            //Point getXY = e.Location;
+            int x = ((e.Location.X -204) * 2608 / 901);
+            int y = ((e.Location.Y -  1) * 2608 / 901);
+
+            try
+            {
+                richTextBox1.AppendText( " "+x.ToString()+","+y.ToString()+", 20, 0\n" );
+                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, e.ToString() });
+            }
+            catch (Exception error)
+            {
+                MessageBox.Show(error.ToString());
             }
         }
     }
