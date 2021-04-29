@@ -74,6 +74,7 @@
             // 
             // ObsStart
             // 
+            this.ObsStart.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.ObsStart.Location = new System.Drawing.Point(12, 12);
             this.ObsStart.Name = "ObsStart";
             this.ObsStart.Size = new System.Drawing.Size(103, 52);
@@ -122,6 +123,7 @@
             // 
             // ObsEndButton
             // 
+            this.ObsEndButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.ObsEndButton.Location = new System.Drawing.Point(12, 96);
             this.ObsEndButton.Name = "ObsEndButton";
             this.ObsEndButton.Size = new System.Drawing.Size(103, 51);
@@ -132,6 +134,7 @@
             // 
             // ShowButton
             // 
+            this.ShowButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.ShowButton.Location = new System.Drawing.Point(12, 399);
             this.ShowButton.Name = "ShowButton";
             this.ShowButton.Size = new System.Drawing.Size(103, 33);
@@ -142,6 +145,7 @@
             // 
             // CloseButton
             // 
+            this.CloseButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.CloseButton.Location = new System.Drawing.Point(12, 450);
             this.CloseButton.Name = "CloseButton";
             this.CloseButton.Size = new System.Drawing.Size(103, 45);
@@ -152,6 +156,7 @@
             // 
             // buttonSave
             // 
+            this.buttonSave.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.buttonSave.Location = new System.Drawing.Point(12, 191);
             this.buttonSave.Name = "buttonSave";
             this.buttonSave.Size = new System.Drawing.Size(103, 45);
@@ -172,6 +177,7 @@
             // 
             // ButtonSaveEnd
             // 
+            this.ButtonSaveEnd.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.ButtonSaveEnd.Location = new System.Drawing.Point(12, 260);
             this.ButtonSaveEnd.Name = "ButtonSaveEnd";
             this.ButtonSaveEnd.Size = new System.Drawing.Size(103, 49);
@@ -290,6 +296,7 @@
             // 
             // buttonMove
             // 
+            this.buttonMove.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.buttonMove.Location = new System.Drawing.Point(12, 541);
             this.buttonMove.Name = "buttonMove";
             this.buttonMove.Size = new System.Drawing.Size(103, 48);
@@ -334,6 +341,7 @@
             // 
             // button_mask
             // 
+            this.button_mask.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.button_mask.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.button_mask.Location = new System.Drawing.Point(12, 787);
             this.button_mask.Name = "button_mask";
@@ -345,6 +353,7 @@
             // 
             // button_test
             // 
+            this.button_test.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.button_test.Location = new System.Drawing.Point(13, 851);
             this.button_test.Name = "button_test";
             this.button_test.Size = new System.Drawing.Size(102, 56);

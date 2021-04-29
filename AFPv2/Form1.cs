@@ -165,6 +165,7 @@ namespace AFPv2
             richTextBox1.AppendText(s);
             logger.Info(s);
             timer_thingspeak_Tick( sender, e);
+            buttonMakeDark_Click(sender, e);
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -679,16 +680,47 @@ namespace AFPv2
         // settingsの作成
         private void buttonMakeDark_Click(object sender, EventArgs e)
         {
-            SettingsMake();
+            ///SettingsMake();
             //appSettings = SettingsLoad(21);
             //SaveAvgImage();
             star_adaptive_threshold = (int)numericUpDownStarMin.Value; // kenyou  0-5 月、惑星  6:シリウス　7:ベガ
-        }
 
-        #region TimerTick
-        //
-        // Timer Tick
-        private void timerSaveTimeOver_Tick(object sender, EventArgs e)
+            // Make Mask
+            StreamReader sr = new StreamReader(@"mask_data.csv");
+            {
+                // 末尾まで繰り返す
+                while (!sr.EndOfStream)
+                {
+                    // CSVファイルの一行を読み込む
+                    string line = sr.ReadLine();
+                    // 読み込んだ一行をカンマ毎に分けて配列に格納する
+                    string[] values = line.Split(',');
+
+                    // 配列からリストに格納する [xc,yc,r,OUT/IN]
+                    List<string> lists = new List<string>();
+                    lists.AddRange(values);
+
+                    int x = Convert.ToInt32(lists[0]);
+                    int y = Convert.ToInt32(lists[1]);
+                    int r = Convert.ToInt32(lists[2]);
+                    int io= Convert.ToInt32(lists[3]) * 255;
+
+                    Cv2.Circle(img_mask, new OpenCvSharp.Point(x,y), r, new Scalar(io),-1);
+                    img_mask.SaveImage("img_mask.png");
+
+                    // コンソールに出力する
+                    foreach (string list in lists)
+                    {
+                        System.Console.Write("{0} ", list);
+                    }
+                    System.Console.WriteLine();
+                }
+            }
+        }
+            #region TimerTick
+            //
+            // Timer Tick
+            private void timerSaveTimeOver_Tick(object sender, EventArgs e)
         {
             timerSaveTimeOver.Stop();
             timerSavePost.Stop();
@@ -932,6 +964,17 @@ namespace AFPv2
                 {
                     Cv2.CvtColor(imgdata_static.img, img_dmk3, ColorConversionCodes.BayerGB2BGR); //ColorConversion.BayerGbToBgr);
                 }
+
+                // Mask 描画
+                var imgtmp = Cv2.Split(img_dmk3);
+                var imgtmp2 = ~img_mask; //反転
+                
+                Cv2.Add(imgtmp[2], imgtmp2 / 4, imgtmp[2]);
+                Cv2.Merge(imgtmp, img_dmk3);
+                imgtmp2.Dispose();
+                imgtmp[0].Dispose();
+                imgtmp[1].Dispose();
+                imgtmp[2].Dispose();
 
                 double k1 = 1.3333; //4deg 
                 double k2 = 0.3333; //直径1deg
