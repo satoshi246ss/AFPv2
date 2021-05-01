@@ -63,6 +63,7 @@
             this.button_mask = new System.Windows.Forms.Button();
             this.button_test = new System.Windows.Forms.Button();
             this.timerObsOnOff = new System.Windows.Forms.Timer(this.components);
+            this.buttonUserSetLoad = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).BeginInit();
@@ -192,7 +193,7 @@
             // 
             this.numericUpDownStarMin.Location = new System.Drawing.Point(124, 541);
             this.numericUpDownStarMin.Name = "numericUpDownStarMin";
-            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 25);
             this.numericUpDownStarMin.TabIndex = 8;
             // 
             // timerSavePost
@@ -313,14 +314,14 @@
             // 
             this.numericUpDown_daz.Location = new System.Drawing.Point(124, 590);
             this.numericUpDown_daz.Name = "numericUpDown_daz";
-            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 25);
             this.numericUpDown_daz.TabIndex = 15;
             // 
             // numericUpDown_dalt
             // 
             this.numericUpDown_dalt.Location = new System.Drawing.Point(124, 632);
             this.numericUpDown_dalt.Name = "numericUpDown_dalt";
-            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 25);
             this.numericUpDown_dalt.TabIndex = 16;
             // 
             // checkBox_DispMode
@@ -330,7 +331,7 @@
             this.checkBox_DispMode.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox_DispMode.Location = new System.Drawing.Point(12, 719);
             this.checkBox_DispMode.Name = "checkBox_DispMode";
-            this.checkBox_DispMode.Size = new System.Drawing.Size(81, 21);
+            this.checkBox_DispMode.Size = new System.Drawing.Size(107, 22);
             this.checkBox_DispMode.TabIndex = 17;
             this.checkBox_DispMode.Text = "DispMode";
             this.checkBox_DispMode.UseVisualStyleBackColor = true;
@@ -340,7 +341,7 @@
             // 
             this.numericUpDownStarCount.Location = new System.Drawing.Point(124, 674);
             this.numericUpDownStarCount.Name = "numericUpDownStarCount";
-            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 25);
             this.numericUpDownStarCount.TabIndex = 18;
             // 
             // button_mask
@@ -358,7 +359,7 @@
             // button_test
             // 
             this.button_test.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.button_test.Location = new System.Drawing.Point(13, 851);
+            this.button_test.Location = new System.Drawing.Point(13, 920);
             this.button_test.Name = "button_test";
             this.button_test.Size = new System.Drawing.Size(102, 56);
             this.button_test.TabIndex = 20;
@@ -372,9 +373,22 @@
             this.timerObsOnOff.Interval = 5000;
             this.timerObsOnOff.Tick += new System.EventHandler(this.timerObsOnOff_Tick);
             // 
+            // buttonUserSetLoad
+            // 
+            this.buttonUserSetLoad.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.buttonUserSetLoad.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.buttonUserSetLoad.Location = new System.Drawing.Point(13, 840);
+            this.buttonUserSetLoad.Name = "buttonUserSetLoad";
+            this.buttonUserSetLoad.Size = new System.Drawing.Size(103, 67);
+            this.buttonUserSetLoad.TabIndex = 21;
+            this.buttonUserSetLoad.Text = "UserSetLoad";
+            this.buttonUserSetLoad.UseVisualStyleBackColor = true;
+            this.buttonUserSetLoad.Click += new System.EventHandler(this.buttonUserSetLoad_Click);
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1565, 1119);
+            this.Controls.Add(this.buttonUserSetLoad);
             this.Controls.Add(this.button_test);
             this.Controls.Add(this.button_mask);
             this.Controls.Add(this.numericUpDownStarCount);
@@ -447,6 +461,7 @@
         private System.Windows.Forms.Button button_mask;
         private System.Windows.Forms.Button button_test;
         private System.Windows.Forms.Timer timerObsOnOff;
+        private System.Windows.Forms.Button buttonUserSetLoad;
     }
 }
 

@@ -521,35 +521,35 @@ namespace AFPv2
             sett.AviMaxFrame = 450;
             SettingsSave(sett);
 
-            // FishEye2 PointGreyCamera (2016-2017/1)
-            sett.Text = "FishEye2 PGC GS3-U3-23S6M";
-            sett.ID = 191;               //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
-            sett.NoCapDev = 191;
-            sett.MtMon_ID = 1;
+            // NUV2 PointGreyCamera (2021/5)
+            sett.Text = "NUV2 FLIR Blackfly S BFS-U3-200S6M(IMX183)";
+            sett.ID = 17;               //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
+            sett.NoCapDev = 17;
+            sett.MtMon_ID = 17;
             sett.CameraType = "PG";    //カメラタイプ： IDS Basler AVT IS analog
             sett.CameraID = 3;         //カメラタイプ毎のID
             sett.CameraColor = Camera_Color.mono;    // 0:mono(mono8)  1:color 2:mono12packed
             sett.CameraInterface = Camera_Interface.USB3;
-            sett.CamPlatform = Platform.Fish1;
+            sett.CamPlatform = Platform.MT2;
             sett.FlipOn = false;
             //sett.Flipmode = OpenCvSharp.FlipMode.X;
             //sett.IP_GIGE_Camera = "192.168.1.151"; //GIGE Camera only.
-            sett.Width = 1920; // 652; //Max 659    4の倍数でメモリ確保される。
-            sett.Height = 1200; // 949; //Max 494    約2.2MB／fr
-            sett.FocalLength = 2.7;      //[mm] Fuji FE185C086HA-1  fl=2.7mm f1.8
-            sett.Ccdpx = 0.00586; //[mm] CCD:IMX174
-            sett.Ccdpy = 0.00586; //[mm] CCD:IMX174
-            sett.Xoa = 960;// 320;
-            sett.Yoa = 600;// 240;            
+            sett.Width  = 5472; //5,472 x 3,648; 652; //Max 659    4の倍数でメモリ確保される。
+            sett.Height = 3648; // 949; //Max 494    約2.2MB／fr
+            sett.FocalLength = 80;      //[mm] Nikkor 80mm F5.6
+            sett.Ccdpx = 0.0024; //[mm] CCD:IMX183
+            sett.Ccdpy = 0.0024; //[mm]
+            sett.Xoa = 2736;// 320;
+            sett.Yoa = 1824;// 240;            
             sett.Roa = 10.0 / (Math.Atan(sett.Ccdpx / sett.FocalLength) * 180 / Math.PI); //半径1deg    // 255x192:ace640の縦視野
-            sett.Theta = 180;
-            sett.Framerate = 50;// 100.0; //[fps]
-            sett.FifoMaxFrame = 256;
+            sett.Theta = 0;
+            sett.Framerate = 18;// 18 max; //[fps]
+            sett.FifoMaxFrame = 64;
             sett.ExposureValue = -0.5;
-            sett.Exposure = 19.9; //[ms]
+            sett.Exposure = 50.0; //[ms]
             sett.Gain = 1023; // 100-1023  要検討
-            sett.UseDetect = true;
-            sett.PreSaveNum = 100;
+            sett.UseDetect = false;
+            sett.PreSaveNum = 0;
             sett.PostSaveProcess = true;
             sett.ThresholdBlob = 64;    // 検出閾値（０－２５５）
             sett.ThresholdMinArea = 0.25;// 最小エリア閾値（最大値ｘ_threshold_min_area)
@@ -558,7 +558,7 @@ namespace AFPv2
             sett.UdpPortSend = 24431;
             sett.SaveDir = @"D:\img_data\";
             sett.SaveDrive = "D:";
-            sett.AviMaxFrame = 500;
+            sett.AviMaxFrame = 50;
             SettingsSave(sett);
 
 
@@ -585,12 +585,12 @@ namespace AFPv2
             sett.Roa = 10.0 / (Math.Atan(sett.Ccdpx / sett.FocalLength) * 180 / Math.PI); //半径1deg    // 255x192:ace640の縦視野
             sett.Theta = 175;
             sett.Framerate = 30;// 100.0; //[fps]
-            sett.FifoMaxFrame = 64;
+            sett.FifoMaxFrame = 128;
             sett.ExposureValue = -0.5;
             sett.Exposure = 32; //[ms]
             sett.Gain = 1023; // 100-1023  要検討
-            sett.UseDetect = false;// true;
-            sett.PreSaveNum = 100 ;
+            sett.UseDetect = true;// true;
+            sett.PreSaveNum = 60 ;
             sett.PostSaveProcess = true;
             sett.ThresholdBlob = 64;    // 検出閾値（０－２５５）
             sett.ThresholdMinArea = 0.25;// 最小エリア閾値（最大値ｘ_threshold_min_area)
@@ -599,7 +599,7 @@ namespace AFPv2
             sett.UdpPortSend = 24431;
             sett.SaveDir = @"D:\img_data\";
             sett.SaveDrive = "D:";
-            sett.AviMaxFrame = 500;
+            sett.AviMaxFrame = 100;
             SettingsSave(sett);
 
             // for test 3000x4096pix

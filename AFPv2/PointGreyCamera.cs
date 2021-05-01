@@ -470,6 +470,47 @@ namespace AFPv2
             }
             return result;
         }
+        static int UserSetLoad(INodeMap nodeMap)
+        {
+            int result = 0;
+            try
+            {
+                Enumeration icom = nodeMap.GetNode<Enumeration>("UserSetSelector");
+                if (icom != null && icom.IsReadable)
+                {
+                    Console.WriteLine("User Set : "+icom.Value.ToString()+"\n");
+                }
+                else
+                {
+                    Console.WriteLine("UserSetSelector not read.");
+                }
+            }
+            catch (SpinnakerException ex)
+            {
+                Console.WriteLine("Error: {0}", ex.Message);
+                result = -1;
+            }
+
+            try
+            {
+                ICommand icom = nodeMap.GetNode<ICommand>("UserSetLoad");
+                if ( icom != null && icom.IsWritable)
+                {
+                    icom.Execute();
+                    Console.WriteLine("\n*** User Set Load ***\n");
+                }
+                else
+                {
+                    Console.WriteLine("User Set Load not execute.");
+                }
+            }
+            catch (SpinnakerException ex)
+            {
+                Console.WriteLine("Error: {0}", ex.Message);
+                result = -1;
+            }
+            return result;
+        }
         // This function prints the device information of the camera from the
         // transport layer; please see NodeMapInfo_CSharp example for more
         // in-depth comments on printing device information from the nodemap.
@@ -576,6 +617,7 @@ namespace AFPv2
                 {
                     return err;
                 }
+                UserSetLoad(nodeMap_iel);// UserSetLoad
                 // Acquire images using the image event handler
                 result = result | AcquireImages(cam, nodeMap, nodeMapTLDevice, ref imageEventListener);
                 // Reset image event handlers
