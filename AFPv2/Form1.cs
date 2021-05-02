@@ -9,7 +9,7 @@ using System.Text;
 using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.XFeatures2D;
-using OpenCvSharp.Blob;
+//using OpenCvSharp.Blob;
 //using VideoInputSharp;
 using System.Diagnostics;
 using System.Threading.Tasks;
