@@ -1382,14 +1382,12 @@ namespace AFPv2
 
         private void pictureBox1_MouseClick(object sender, MouseEventArgs e)
         {
-            //Point getXY = e.Location;
             int x = ((e.Location.X -204) * 2608 / 901);
             int y = ((e.Location.Y -  1) * 2608 / 901);
 
             try
             {
                 richTextBox1.AppendText( " "+x.ToString()+","+y.ToString()+", 20, 0\n" );
-                //this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, e.ToString() });
             }
             catch (Exception error)
             {
