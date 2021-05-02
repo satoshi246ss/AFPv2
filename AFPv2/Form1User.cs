@@ -146,11 +146,12 @@ namespace AFPv2
 
         // 観測開始からのフレーム番号
         public static int frame_id = 0;
+        public static long pgr_frame_id = 0;
         int frame_fifo_id = 0;
         int id_mon = 0;
         DateTime LiveStartTime;
-        //long timestamp; // [us]
-        long frame_timestamp; //[us]
+        public static long pgr_timestamp; // [us]
+        //long frame_timestamp; //[us]
         double dFramerate = 0; // Frame rate[fr/s]
         double reqFramerate = 0; // 要求Frame rate[fr/s]
         double dExpo = 0; // Exposure[us]

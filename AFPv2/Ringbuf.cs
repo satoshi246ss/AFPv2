@@ -52,6 +52,7 @@ namespace AFPv2
         public double kgx, kgy, kvx, kvy;
         public double az, alt, vaz, valt;
         public Udp_kv udpkv1;
+        public long timestamp; // 2021 5 2 added.
 
         // デフォルトコンストラクタ structはだめ
  /*       public ImageData() // structはだめ
@@ -82,6 +83,7 @@ namespace AFPv2
             az = alt = vaz = valt = 0.0;
             blobs = new CvBlobs();
             udpkv1 = new Udp_kv();
+            timestamp = 0;
         }
         public void init(Int32 wi, Int32 he)
         {

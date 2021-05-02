@@ -64,6 +64,8 @@
             this.button_test = new System.Windows.Forms.Button();
             this.timerObsOnOff = new System.Windows.Forms.Timer(this.components);
             this.buttonUserSetLoad = new System.Windows.Forms.Button();
+            this.checkBox_ExposureAuto = new System.Windows.Forms.CheckBox();
+            this.checkBox_GainAuto = new System.Windows.Forms.CheckBox();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).BeginInit();
@@ -127,7 +129,7 @@
             // ObsEndButton
             // 
             this.ObsEndButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.ObsEndButton.Location = new System.Drawing.Point(12, 96);
+            this.ObsEndButton.Location = new System.Drawing.Point(12, 70);
             this.ObsEndButton.Name = "ObsEndButton";
             this.ObsEndButton.Size = new System.Drawing.Size(103, 51);
             this.ObsEndButton.TabIndex = 3;
@@ -149,7 +151,7 @@
             // CloseButton
             // 
             this.CloseButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.CloseButton.Location = new System.Drawing.Point(12, 450);
+            this.CloseButton.Location = new System.Drawing.Point(11, 1008);
             this.CloseButton.Name = "CloseButton";
             this.CloseButton.Size = new System.Drawing.Size(103, 45);
             this.CloseButton.TabIndex = 5;
@@ -160,7 +162,7 @@
             // buttonSave
             // 
             this.buttonSave.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.buttonSave.Location = new System.Drawing.Point(12, 191);
+            this.buttonSave.Location = new System.Drawing.Point(11, 166);
             this.buttonSave.Name = "buttonSave";
             this.buttonSave.Size = new System.Drawing.Size(103, 45);
             this.buttonSave.TabIndex = 6;
@@ -181,7 +183,7 @@
             // ButtonSaveEnd
             // 
             this.ButtonSaveEnd.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.ButtonSaveEnd.Location = new System.Drawing.Point(12, 260);
+            this.ButtonSaveEnd.Location = new System.Drawing.Point(11, 217);
             this.ButtonSaveEnd.Name = "ButtonSaveEnd";
             this.ButtonSaveEnd.Size = new System.Drawing.Size(103, 49);
             this.ButtonSaveEnd.TabIndex = 7;
@@ -206,7 +208,7 @@
             this.checkBoxObsAuto.Checked = true;
             this.checkBoxObsAuto.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBoxObsAuto.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.checkBoxObsAuto.Location = new System.Drawing.Point(13, 334);
+            this.checkBoxObsAuto.Location = new System.Drawing.Point(11, 127);
             this.checkBoxObsAuto.Name = "checkBoxObsAuto";
             this.checkBoxObsAuto.Size = new System.Drawing.Size(108, 24);
             this.checkBoxObsAuto.TabIndex = 9;
@@ -385,9 +387,33 @@
             this.buttonUserSetLoad.UseVisualStyleBackColor = true;
             this.buttonUserSetLoad.Click += new System.EventHandler(this.buttonUserSetLoad_Click);
             // 
+            // checkBox_ExposureAuto
+            // 
+            this.checkBox_ExposureAuto.AutoSize = true;
+            this.checkBox_ExposureAuto.Location = new System.Drawing.Point(12, 292);
+            this.checkBox_ExposureAuto.Name = "checkBox_ExposureAuto";
+            this.checkBox_ExposureAuto.Size = new System.Drawing.Size(142, 22);
+            this.checkBox_ExposureAuto.TabIndex = 22;
+            this.checkBox_ExposureAuto.Text = "Exposure Auto";
+            this.checkBox_ExposureAuto.UseVisualStyleBackColor = true;
+            this.checkBox_ExposureAuto.CheckedChanged += new System.EventHandler(this.checkBox_ExposureAuto_CheckedChanged);
+            // 
+            // checkBox_GainAuto
+            // 
+            this.checkBox_GainAuto.AutoSize = true;
+            this.checkBox_GainAuto.Location = new System.Drawing.Point(12, 320);
+            this.checkBox_GainAuto.Name = "checkBox_GainAuto";
+            this.checkBox_GainAuto.Size = new System.Drawing.Size(108, 22);
+            this.checkBox_GainAuto.TabIndex = 23;
+            this.checkBox_GainAuto.Text = "Gain Auto";
+            this.checkBox_GainAuto.UseVisualStyleBackColor = true;
+            this.checkBox_GainAuto.CheckedChanged += new System.EventHandler(this.checkBox_GainAuto_CheckedChanged);
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1565, 1119);
+            this.Controls.Add(this.checkBox_GainAuto);
+            this.Controls.Add(this.checkBox_ExposureAuto);
             this.Controls.Add(this.buttonUserSetLoad);
             this.Controls.Add(this.button_test);
             this.Controls.Add(this.button_mask);
@@ -462,6 +488,8 @@
         private System.Windows.Forms.Button button_test;
         private System.Windows.Forms.Timer timerObsOnOff;
         private System.Windows.Forms.Button buttonUserSetLoad;
+        private System.Windows.Forms.CheckBox checkBox_ExposureAuto;
+        private System.Windows.Forms.CheckBox checkBox_GainAuto;
     }
 }
 

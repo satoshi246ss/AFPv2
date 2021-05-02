@@ -1417,7 +1417,29 @@ namespace AFPv2
 
         private void buttonUserSetLoad_Click(object sender, EventArgs e)
         {
-            // UserSetLoad(nodeMap_iel); // camera接続後でなれけば上手くいかない。
+            // PgUserSetLoad(nodeMap_iel); // camera接続後でなれけば上手くいかない。
+        }
+
+        private void checkBox_ExposureAuto_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox_ExposureAuto.Checked)
+                PgExposureAuto(nodeMap_iel, true);
+            else
+            {
+                PgExposureAuto(nodeMap_iel, false);
+                PgSetExposure(nodeMap_iel, appSettings.Exposure * 1000);// expo[ms] in[usec]
+            }
+        }
+
+        private void checkBox_GainAuto_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox_GainAuto.Checked)
+                PgGainAuto(nodeMap_iel, true);
+            else
+            {
+                PgGainAuto(nodeMap_iel, false);
+                PgSetGain(nodeMap_iel, appSettings.Gain);
+            }
         }
     }
 }
