@@ -109,6 +109,9 @@ namespace AFPv2
         int save_frame_count_max;
         int avi_id;
 
+        string log_fn;
+        string appendText;
+
         public int MtMode { get; set; } // MtMode  MT3:3   MT2:2
         public string FileName { get; set; } 
 
@@ -555,6 +558,7 @@ namespace AFPv2
         /// </remarks>
         public void VideoWriterInit(string fn)
         {
+            log_fn = fn;
             int codec = FourCC.DIB; // Cv.FOURCC('D', 'I', 'B', ' ');  // 0; //非圧縮avi
                                     //this.vw = new CvVideoWriter(fn, codec, 29.97, new CvSize(this.width, this.height), true); //color
             //this.vw = new VideoWriter(fn, FourCC.DIB, 30, new Size(Width, Height), false); //mono NG ???
@@ -564,6 +568,9 @@ namespace AFPv2
             fn += this.data[(this.bottom - 1) & this.mask].t.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}", NoCapDev) + ".avi";
             //this.writer = new StreamWriter( this.data[(this.bottom - 1) & this.mask].t.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}", NoCapDev) + ".txt", true, System.Text.Encoding.GetEncoding("shift_jis"));
             save_frame_count = 0;
+
+            log_fn += this.data[(this.bottom - 1) & this.mask].t.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}", NoCapDev) + ".txt";
+            appendText = "";
         }
 
         /// <summary>
@@ -656,6 +663,7 @@ namespace AFPv2
             vw.Write(imgR);
             //writer.WriteLine("{0} {1} {2}  ", vd.id, vd.kgx, vd.kgy);
             int id = System.Threading.Thread.CurrentThread.ManagedThreadId; Console.WriteLine("RingBuf ThreadID : " + id);
+            appendText += DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss ID:") + vd.id.ToString() +" "+ this.data[this.bottom].timestamp.ToString() + Environment.NewLine;
         }
 
         /// <summary>
@@ -673,10 +681,13 @@ namespace AFPv2
                 vw.Write(imgR);
                 vw.Dispose();
             }
-       //     if (writer != null)
-       //     {
-       //         writer.Close();
-       //     }
+            System.IO.File.AppendAllText(log_fn, appendText);
+            appendText = "";
+
+            //     if (writer != null)
+            //     {
+            //         writer.Close();
+            //     }
         }
 
         /// <summary>
