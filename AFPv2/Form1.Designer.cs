@@ -120,10 +120,12 @@
             // 
             // timerMTmonSend
             // 
+            this.timerMTmonSend.Interval = 2000;
             this.timerMTmonSend.Tick += new System.EventHandler(this.timerMTmonSend_Tick);
             // 
             // timerSaveTimeOver
             // 
+            this.timerSaveTimeOver.Interval = 30000;
             this.timerSaveTimeOver.Tick += new System.EventHandler(this.timerSaveTimeOver_Tick);
             // 
             // ObsEndButton
@@ -172,7 +174,7 @@
             // 
             // timerDisplay
             // 
-            this.timerDisplay.Interval = 200;
+            this.timerDisplay.Interval = 500;
             this.timerDisplay.Tick += new System.EventHandler(this.timerDisplay_Tick);
             // 
             // timerSave
@@ -200,6 +202,7 @@
             // 
             // timerSavePost
             // 
+            this.timerSavePost.Interval = 2000;
             this.timerSavePost.Tick += new System.EventHandler(this.timerSavePostTime_Tick);
             // 
             // checkBoxObsAuto
@@ -218,7 +221,7 @@
             // 
             // timerWaitShutdown
             // 
-            this.timerWaitShutdown.Interval = 10000;
+            this.timerWaitShutdown.Interval = 20000;
             this.timerWaitShutdown.Tick += new System.EventHandler(this.timerWaitShutdown_Tick);
             // 
             // checkBoxDispAvg
