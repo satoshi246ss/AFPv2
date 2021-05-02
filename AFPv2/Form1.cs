@@ -9,7 +9,7 @@ using System.Text;
 using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.XFeatures2D;
-using OpenCvSharp.Blob;
+//using OpenCvSharp.Blob;
 //using VideoInputSharp;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -156,8 +156,17 @@ namespace AFPv2
         private void Form1_Shown(object sender, EventArgs e)
         {
             checkBoxObsAuto_CheckedChanged(sender, e);
-            diskspace = cDrive.TotalFreeSpace;
-            timerMTmonSend .Start();
+            try
+            {
+                diskspace = cDrive.TotalFreeSpace;
+            }
+            catch (System.IO.IOException ve)
+            {
+                richTextBox1.AppendText(ve.ToString());
+                logger.Error(ve.ToString());
+            }
+
+            timerMTmonSend.Start();
 
             starttime = Planet.ObsStartTime(DateTime.Now) - DateTime.Today;
             endtime = Planet.ObsEndTime(DateTime.Now) - DateTime.Today;
@@ -775,7 +784,15 @@ namespace AFPv2
  
         private void timerObsOnOff_Tick(object sender, EventArgs e)
         {
-            diskspace = cDrive.TotalFreeSpace;
+            try
+            {
+                diskspace = cDrive.TotalFreeSpace;
+            }
+            catch (System.IO.IOException ve)
+            {
+                //richTextBox1.AppendText(ve.ToString());
+                //logger.Error(ve.ToString());
+            }
             MTmon_Data_Send(sender);
  
             TimeSpan nowtime = DateTime.Now - DateTime.Today;
@@ -965,19 +982,23 @@ namespace AFPv2
                     Cv2.CvtColor(imgdata_static.img, img_dmk3, ColorConversionCodes.BayerGB2BGR); //ColorConversion.BayerGbToBgr);
                 }
 
-                // Mask 描画
-                var imgtmp = Cv2.Split(img_dmk3);
-                var imgtmp2 = ~img_mask; //反転
-                
-                Cv2.Add(imgtmp[2], imgtmp2 / 4, imgtmp[2]);
-                Cv2.Merge(imgtmp, img_dmk3);
-                imgtmp2.Dispose();
-                imgtmp[0].Dispose();
-                imgtmp[1].Dispose();
-                imgtmp[2].Dispose();
+                // Mask display for Fish2
+                if (appSettings.NoCapDev == 1)
+                {
+                    // Mask 描画
+                    var imgtmp = Cv2.Split(img_dmk3);
+                    var imgtmp2 = ~img_mask; //反転
 
-                double k1 = 1.3333; //4deg 
-                double k2 = 0.3333; //直径1deg
+                    Cv2.Add(imgtmp[2], imgtmp2 / 4, imgtmp[2]);
+                    Cv2.Merge(imgtmp, img_dmk3);
+                    imgtmp2.Dispose();
+                    imgtmp[0].Dispose();
+                    imgtmp[1].Dispose();
+                    imgtmp[2].Dispose();
+                }
+                double k0 = 4.0;
+                double k1 = 1.3333/k0; //4deg 
+                double k2 = 0.3333/k0; //直径1deg
                 double roa = appSettings.Roa;
 
                 OpenCvSharp.Point OCPoint = new OpenCvSharp.Point(appSettings.Xoa, appSettings.Yoa);
@@ -992,7 +1013,7 @@ namespace AFPv2
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c);
                     Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
-                    Cv2.Circle(img_dmk3, (OpenCvSharp.Point)Point1, 5, new Scalar(0, 255, 0));       // Arrow
+                    Cv2.Circle(img_dmk3, (OpenCvSharp.Point)Point1, (int)k2, new Scalar(0, 255, 0));       // Arrow
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 90);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 90);
@@ -1004,7 +1025,7 @@ namespace AFPv2
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 270);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 270);
-                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(230, 105, 0));
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 105, 230));
 
                     str = String.Format("ID:{4,7:D1} W: dAz({5,6:F1},{6,6:F1}) dPix({0,6:F1},{1,6:F1})({2,6:F0})({3,0:00}), th:{7,6:F1}", gx, gy, max_val, max_label, frame_id, daz, dalt, theta_c);
                 }
@@ -1017,13 +1038,13 @@ namespace AFPv2
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 90);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 90);
-                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(230, 105, 0));
+                    Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 105, 230));
                     //Cv.Line(img_dmk3, Point1, Point2, new Scalar(0, 205, 0));
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 180);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 180);
                     Cv2.Line(img_dmk3, (OpenCvSharp.Point)Point1, (OpenCvSharp.Point)Point2, new Scalar(0, 205, 0));
-                    Cv2.Circle(img_dmk3, (OpenCvSharp.Point)Point1, 5, new Scalar(0, 255, 0));       // Arrow
+                    Cv2.Circle(img_dmk3, (OpenCvSharp.Point)Point1, (int)k2, new Scalar(0, 255, 0));       // Arrow
 
                     Point1 = Rotation(OCPoint, k1 * roa, theta_c + 270);
                     Point2 = Rotation(OCPoint, k2 * roa, theta_c + 270);
@@ -1031,7 +1052,6 @@ namespace AFPv2
                     //Cv.Line(img_dmk3, Point1, Point2, new Scalar(230, 105, 0));
 
                     str = String.Format("ID:{4,7:D1} E: dAz({5,6:F1},{6,6:F1}) dPix({0,6:F1},{1,6:F1})({2,6:F0})({3,0:00}), th:{7,6:F1}", gx, gy, max_val, max_label, frame_id, daz, dalt, theta_c);
-
                 }
                 if (img_dmk3.Width >= 1600)
                 {
@@ -1393,6 +1413,11 @@ namespace AFPv2
             {
                 MessageBox.Show(error.ToString());
             }
+        }
+
+        private void buttonUserSetLoad_Click(object sender, EventArgs e)
+        {
+            // UserSetLoad(nodeMap_iel); // camera接続後でなれけば上手くいかない。
         }
     }
 }
