@@ -817,6 +817,11 @@ namespace AFPv2
                     ObsStart_Click(sender, e);
                 }
             }
+            // Star display for Fish2
+            if (appSettings.NoCapDev == 1)
+            {
+                cal_star_disp_pos(appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpy); // fish2 
+            }
         }
 
         private void timerWaitShutdown_Tick(object sender, EventArgs e)
@@ -1067,24 +1072,32 @@ namespace AFPv2
                 // Star display for Fish2
                 if (appSettings.NoCapDev == 1)
                 {
-                    int cx, cy, r_mag, i;
-                    for (i = 0; i < star.Count; ++i)
+                    double cx, cy, r_mag;
+                    int r_base = 10;
+                    int r_p = 2;
+                    int star_disp_count = 0;
+                    for (int i = 0; i < star.Count; ++i)
                     {
-                        get_star_disp_pos(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpx, out cx, out cy, out r_mag);
+                        get_star_CCD_pos(i, out cx, out cy, out r_mag);
+                        //get_star_disp_pos(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpx, out cx, out cy, out r_mag);
                         if (cx > -99990)
                         {
+                            r_mag = (int)(r_base - r_p * r_mag);
+
                             OCPoint.X = (int)(appSettings.Xoa + cx);
                             OCPoint.Y = (int)(appSettings.Yoa + cy);
-                            Cv2.Circle(img_dmk3, OCPoint, 2 * r_mag, new Scalar(0, 255, 0));
+                            Cv2.Circle(img_dmk3, OCPoint, (int)(2 * r_mag), new Scalar(0, 255, 0));
+                            star_disp_count++;
                         }
                     }
-                }
+                    label_mask.Text = star_disp_count.ToString();
+                }                
 
                 try
                 {
                     //Cv2.ImShow("PB test", img_dmk3);//Cv2.WaitKey();
-                    Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
-                    //Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
+                    //Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
+                    Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
                     pictureBox1.Image = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
 
                     //int fid = frame_id % 16;

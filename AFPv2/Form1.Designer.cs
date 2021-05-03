@@ -66,6 +66,7 @@
             this.buttonUserSetLoad = new System.Windows.Forms.Button();
             this.checkBox_ExposureAuto = new System.Windows.Forms.CheckBox();
             this.checkBox_GainAuto = new System.Windows.Forms.CheckBox();
+            this.label_mask = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).BeginInit();
@@ -412,9 +413,20 @@
             this.checkBox_GainAuto.UseVisualStyleBackColor = true;
             this.checkBox_GainAuto.CheckedChanged += new System.EventHandler(this.checkBox_GainAuto_CheckedChanged);
             // 
+            // label_mask
+            // 
+            this.label_mask.AutoSize = true;
+            this.label_mask.Font = new System.Drawing.Font("MS UI Gothic", 11F);
+            this.label_mask.Location = new System.Drawing.Point(120, 802);
+            this.label_mask.Name = "label_mask";
+            this.label_mask.Size = new System.Drawing.Size(63, 22);
+            this.label_mask.TabIndex = 24;
+            this.label_mask.Text = "label1";
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1565, 1119);
+            this.Controls.Add(this.label_mask);
             this.Controls.Add(this.checkBox_GainAuto);
             this.Controls.Add(this.checkBox_ExposureAuto);
             this.Controls.Add(this.buttonUserSetLoad);
@@ -493,6 +505,7 @@
         private System.Windows.Forms.Button buttonUserSetLoad;
         private System.Windows.Forms.CheckBox checkBox_ExposureAuto;
         private System.Windows.Forms.CheckBox checkBox_GainAuto;
+        private System.Windows.Forms.Label label_mask;
     }
 }
 

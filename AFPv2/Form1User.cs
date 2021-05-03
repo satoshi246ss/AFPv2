@@ -1520,7 +1520,7 @@ namespace AFPv2
         //   fl:焦点距離[mm],　ccdpx,ccdpy:ピクセル間隔[mm]
 
         // display表示用星位置
-        private void get_star_disp_pos(int id, 
+        private void get_star_disp_pos_fish2(int id, 
                double az_c, double alt_c, double theta_c,
                double fl, double ccdpx, double ccdpy, 
                out int cx, out int cy, out int r_mag)
@@ -1538,9 +1538,28 @@ namespace AFPv2
             {
                 cx2 = -99999; cy2 = -99999;
             }
+            star.ID = id;
+            star.Xcal = cx2;
+            star.Ycal = cy2;
+
             r_mag = (int)(r_base - r_p * mag);
             cx = (int)cx2;
             cy = (int)cy2;
+        }
+        // display表示用星位置計算
+        private void cal_star_disp_pos( double theta_c,
+               double fl, double ccdpx, double ccdpy )
+        {
+            int cx, cy, r_mag;
+
+            // Star display for Fish2
+            if (appSettings.NoCapDev == 1)
+            {
+                for (int i = 0; i < star.Count; ++i)
+                {
+                    get_star_disp_pos_fish2(i, 0, 0, theta_c, fl, ccdpx, ccdpy, out cx, out cy, out r_mag);                   
+                }
+            }
         }
 
         private void get_star_pos(int id, out double az, out double alt, out double mag)
@@ -1550,6 +1569,18 @@ namespace AFPv2
 
             az = star.Az;
             alt = star.Alt;
+            mag = star.Mag;
+
+            //string s = string.Format("Star count:{0} {1} Az:{2} {3}\n", Star.ID, Star.Name, Star.Az, Star.Alt);
+            //richTextBox1.Focus(); richTextBox1.AppendText(s);
+        }
+        private void get_star_CCD_pos(int id, out double cx, out double cy, out double mag)
+        {
+            star.ID = id;
+            //star.cal_azalt();
+
+            cx = star.Xcal;
+            cy = star.Ycal;
             mag = star.Mag;
 
             //string s = string.Format("Star count:{0} {1} Az:{2} {3}\n", Star.ID, Star.Name, Star.Az, Star.Alt);
