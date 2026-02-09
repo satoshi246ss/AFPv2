@@ -130,21 +130,25 @@ namespace AFPv2
         }
         // PGR Auto EV用　露光量設定
         public double ExposureValue { get; set; }
+        public bool ExposureAuto { get; set; }
+         public double Exposure { get; set; }
 
-        private double _exposure;
-        public double Exposure
-        {
-            get { return _exposure; }
-            set { _exposure = value; }
-        }
+        //private double _exposure;
+        //public double Exposure
+        //{
+        //    get { return _exposure; }
+        //    set { _exposure = value; }
+        //}
 
-        private double _gain;
+        public bool GainAuto { get; set; }
+        public double Gain { get; set; }
+        /* private double _gain;
         public double Gain
         {
             get { return _gain; }
             set { _gain = value; }
         }
-
+        */
         public bool uEye_AOI_use { get; set; }
         public int uEye_AOI_x { get; set; }
         public int uEye_AOI_y { get; set; }
@@ -304,8 +308,10 @@ namespace AFPv2
             _framerate = 75.0; //[fps]
             _fifo_max_frame = 64;
             ExposureValue = -0.5; //[EV]
-            _exposure = 13; //[ms]
-            _gain = 100;
+            ExposureAuto = false;
+            Exposure = 13; //[ms]
+            GainAuto = false;
+            Gain = 100;
             _use_detect = true;
             _threshold_blob = 128;     // 検出閾値（０－２５５）
             _threshold_min_area = 0.25;// 最小エリア閾値（最大値ｘ_threshold_min_area)

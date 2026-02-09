@@ -563,7 +563,7 @@ namespace AFPv2
                                     //this.vw = new CvVideoWriter(fn, codec, 29.97, new CvSize(this.width, this.height), true); //color
             //this.vw = new VideoWriter(fn, FourCC.DIB, 30, new Size(Width, Height), false); //mono NG ???
 //            this.vw = new VideoWriter(fn, VideoCaptureAPIs.FFMPEG, FourCC.FromFourChars('U','L','R','G'), 29.97, new Size(Width, Height), false); //UtVideo mono OK
-            this.vw = new VideoWriter(fn, VideoCaptureAPIs.FFMPEG, FourCC.FromFourChars('U', 'M', 'R', 'G'), 29.97, new Size(Width, Height), false); //UtVideo T2 mono OK
+            this.vw = new VideoWriter(fn, VideoCaptureAPIs.FFMPEG, FourCC.FromFourChars('U', 'M', 'R', 'G'), 30.0, new Size(Width, Height), false); //UtVideo T2 mono OK
             //this.vw = new VideoWriter(fn, FourCC.XVID, 30, new Size(Width, Height), false); //mono OK
             fn += this.data[(this.bottom - 1) & this.mask].t.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}", NoCapDev) + ".avi";
             //this.writer = new StreamWriter( this.data[(this.bottom - 1) & this.mask].t.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}", NoCapDev) + ".txt", true, System.Text.Encoding.GetEncoding("shift_jis"));

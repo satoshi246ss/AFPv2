@@ -320,12 +320,12 @@ namespace AFPv2
                 }
             }
         }
-        public void SaveAvgImage()
+        public void SaveAvgImage(string fn = "AvgImage")
         {
             using (Mat img_avg = img_mask.Clone())
             {
                 Cv2.ConvertScaleAbs(imgAvg, img_avg, 1.0, 0.0);
-                img_avg.SaveImage("AvgImage.png");
+                img_avg.SaveImage(fn+".png");
             }
         }
 

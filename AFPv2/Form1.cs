@@ -1,25 +1,26 @@
-﻿using System;
+﻿//using PylonC.NETSupportLibrary;
+//using MtLibrary;
+using MtLibrary2;
+using OpenCvSharp;
+using OpenCvSharp.XFeatures2D;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using OpenCvSharp;
-using OpenCvSharp.XFeatures2D;
 //using OpenCvSharp.Blob;
 //using VideoInputSharp;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Net.Sockets;
-using System.Net;
-using System.Runtime.InteropServices;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
-//using PylonC.NETSupportLibrary;
-//using MtLibrary;
-using MtLibrary2;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace AFPv2                                                                                                                                                                                                                                                                                                 
 {
@@ -165,7 +166,6 @@ namespace AFPv2
                 richTextBox1.AppendText(ve.ToString());
                 logger.Error(ve.ToString());
             }
-
             timerMTmonSend.Start();
 
             starttime = Planet.ObsStartTime(DateTime.Now) - DateTime.Today;
@@ -297,6 +297,15 @@ namespace AFPv2
                             this.udpkv.kalman_init();
                             pos_mes.init();
                             logger.Info("Save CMD recive:Save start.");
+
+                            string savedir = appSettings.SaveDir + DateTime.Now.ToString("yyyyMMdd") + @"\";
+                            // フォルダ (ディレクトリ) が存在しているかどうか確認する
+                            if (!System.IO.Directory.Exists(savedir))
+                            {
+                                System.IO.Directory.CreateDirectory(savedir);
+                            }                        
+                            string bg_fn = savedir + DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}_bg", appSettings.NoCapDev) ;                            
+                            SaveAvgImage(bg_fn);
                         }
                     }
                     else if (kmd3.cmd == 90) //mmPidTest:90
@@ -603,12 +612,18 @@ namespace AFPv2
 
         private void ObsStart_Click(object sender, EventArgs e)
         {
-            richTextBox1.AppendText(DateTime.Now.ToString()+ ":Obs. started.");
+            richTextBox1.AppendText(DateTime.Now.ToString()+ ":Obs. started."+ Environment.NewLine);
             NLogInfo("Obs. started.");
+
             //PGR
             if (cam_maker == Camera_Maker.PointGreyCamera)
             {
                 Task.Run(() => OpenPGRcamera());
+
+                System.Threading.Thread.Sleep(3000);
+                checkBox_ExposureAuto.Checked = appSettings.ExposureAuto;
+                checkBox_GainAuto.Checked = appSettings.GainAuto;
+
             }
             //AVT
             if (cam_maker == Camera_Maker.AVT)
@@ -791,7 +806,7 @@ namespace AFPv2
             catch (System.IO.IOException ve)
             {
                 //richTextBox1.AppendText(ve.ToString());
-                //logger.Error(ve.ToString());
+                logger.Error(ve.ToString());
             }
             MTmon_Data_Send(sender);
  
@@ -820,7 +835,7 @@ namespace AFPv2
             // Star display for Fish2
             if (appSettings.NoCapDev == 1)
             {
-                cal_star_disp_pos(appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpy); // fish2 
+                star_visible_num = cal_star_disp_pos(appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpy); // fish2 
             }
         }
 
@@ -1072,6 +1087,7 @@ namespace AFPv2
                 // Star display for Fish2
                 if (appSettings.NoCapDev == 1)
                 {
+                    string appendText="";
                     double cx, cy, r_mag;
                     int r_base = 10;
                     int r_p = 2;
@@ -1080,17 +1096,20 @@ namespace AFPv2
                     {
                         get_star_CCD_pos(i, out cx, out cy, out r_mag);
                         //get_star_disp_pos(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpx, out cx, out cy, out r_mag);
-                        if (cx > -99990)
+                        if ( get_star_pos_alt(i)>0.0 )
                         {
                             r_mag = (int)(r_base - r_p * r_mag);
 
                             OCPoint.X = (int)(appSettings.Xoa + cx);
                             OCPoint.Y = (int)(appSettings.Yoa + cy);
                             Cv2.Circle(img_dmk3, OCPoint, (int)(2 * r_mag), new Scalar(0, 255, 0));
+                            //NLogInfo(OCPoint.ToString() + " " + r_mag.ToString() + " ");///
+                            appendText += i.ToString()+" cx:"+cx.ToString() +" cy:" +cy.ToString() +" " + OCPoint.ToString() + " " + r_mag.ToString() + " " + Environment.NewLine;
                             star_disp_count++;
                         }
                     }
-                    label_mask.Text = star_disp_count.ToString();
+                    System.IO.File.AppendAllText("appendtext.txt", appendText);
+                    label_mask.Text = star_disp_count.ToString() + "( "+star_visible_num.ToString() + " )";
                 }                
 
                 try

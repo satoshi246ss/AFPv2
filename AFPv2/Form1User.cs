@@ -127,7 +127,7 @@ namespace AFPv2
         string[] cmds;
         Settings appSettings = new Settings();
         //設定保存先のファイル名
-        string SettingsfileName ;//= "settings.config"; //@"C:\test\settings.config";
+        //string SettingsfileName ;//= "settings.config"; //@"C:\test\settings.config";
         string appTitle = "MT3";
 
         // メイン装置光軸座標
@@ -168,12 +168,8 @@ namespace AFPv2
  
         Mat img_dmk3, img_dmk, img2 , imgAvg, img_ueye_aoi, img_mask, img_mask2, img_dark8;
  
-        //Font font = new CvFont(FontFace.HersheyComplex, 0.50, 0.50);
-        //Font font_big = new CvFont(FontFace.HersheyComplex, 1.0, 1.0);
-        //Window cvwin = new CvWindow("AVR Win");
-        //Window cvwin2 = new CvWindow("StarMask Win");
-
         int star_adaptive_threshold = 8;
+        int star_visible_num;
         double gx, gy, max_val, kgx, kgy, kvx, kvy, sgx, sgy;
         Point2d max_centroid;
         int max_label;
@@ -267,7 +263,6 @@ namespace AFPv2
             }
 
             img2 = new Mat(he, wi,  MatType.CV_8U, 1);
-            //imgLabel  = new Mat(he, wi,  CvBlobLib.DepthLabel, 1);
             
             imgAvg    = new Mat(he, wi,  MatType.CV_32F, 1);
             img_mask2 = new Mat(he, wi,  MatType.CV_8U, 1);
@@ -565,7 +560,7 @@ namespace AFPv2
 
             // FishEye2 PointGreyCamera (2020/11/23 - 2020/) IMX253
             sett.Text = "FishEye2 PGC GS3-U3-123S6M (Sony IMX253)";
-            sett.ID = -1;               //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
+            sett.ID = 1;               //ID 全カメラの中のID　保存ファルイの識別にも使用。FishEye:0  MT3Wide:4  MT3Fine:8  MT3SF:12 等々
             sett.NoCapDev = 1;
             sett.MtMon_ID = 1;
             sett.CameraType = "PG";    //カメラタイプ： IDS Basler AVT IS analog
@@ -589,7 +584,9 @@ namespace AFPv2
             sett.FifoMaxFrame = 128;
             sett.ExposureValue = -0.5;
             sett.Exposure = 32; //[ms]
-            sett.Gain = 1023; // 100-1023  要検討
+            sett.ExposureAuto = true;
+            sett.GainAuto = true;
+            sett.Gain = 47; // pgr [dB] ids:100-1023  要検討
             sett.UseDetect = true;// true;
             sett.PreSaveNum = 60 ;
             sett.PostSaveProcess = true;
@@ -1547,19 +1544,22 @@ namespace AFPv2
             cy = (int)cy2;
         }
         // display表示用星位置計算
-        private void cal_star_disp_pos( double theta_c,
+        private int cal_star_disp_pos( double theta_c,
                double fl, double ccdpx, double ccdpy )
         {
-            int cx, cy, r_mag;
+            int cx, cy, r_mag, ii=0, stnum=0;
 
             // Star display for Fish2
             if (appSettings.NoCapDev == 1)
             {
                 for (int i = 0; i < star.Count; ++i)
                 {
-                    get_star_disp_pos_fish2(i, 0, 0, theta_c, fl, ccdpx, ccdpy, out cx, out cy, out r_mag);                   
+                    get_star_disp_pos_fish2(i, 0, 0, theta_c, fl, ccdpx, ccdpy, out cx, out cy, out r_mag);
+                    if (cx > -99990) stnum++;
+                    if (get_star_pos_alt(i) >= 0.0) ii++;
                 }
             }
+            return ii;
         }
 
         private void get_star_pos(int id, out double az, out double alt, out double mag)
@@ -1573,6 +1573,12 @@ namespace AFPv2
 
             //string s = string.Format("Star count:{0} {1} Az:{2} {3}\n", Star.ID, Star.Name, Star.Az, Star.Alt);
             //richTextBox1.Focus(); richTextBox1.AppendText(s);
+        }
+        private double get_star_pos_alt(int id)
+        {
+            star.ID = id;
+            //star.cal_azalt();
+            return star.Alt;
         }
         private void get_star_CCD_pos(int id, out double cx, out double cy, out double mag)
         {

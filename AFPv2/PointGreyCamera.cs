@@ -38,7 +38,7 @@ namespace AFPv2
         const int pgr_WIDTH  = 4096;
         const int pgr_HEIGHT = 3000;
         // set image size
-        private const int AllocSize = pgr_WIDTH * pgr_HEIGHT * 1; //IMX352 mono
+        private const int AllocSize = pgr_WIDTH * pgr_HEIGHT * 1; //Sony IMX253 (1.1" Mono CMOS)  Mono   Grasshopper3 GS3-U3-123S6M
 
         // For old PGR
         public double pgr_frame_rate_pre = 0;
@@ -879,14 +879,14 @@ namespace AFPv2
                     result = 0;
                 }
                 IEnumEntry iExposureModeContinuous = iExposureMode.GetEntryByName(st);
-                if (iExposureModeContinuous == null || !iExposureMode.IsReadable)
+                if (iExposureModeContinuous == null || !iExposureMode.IsWritable)
                 {
                     Console.WriteLine(
-                        "Unable to set acquisition mode to continuous/off (enum entry retrieval). Aborting...\n");
+                        "Unable to set Exposure mode to continuous/off (enum entry retrieval). Aborting...\n");
                     return -1;
                 }
                 iExposureMode.Value = iExposureModeContinuous.Symbolic;
-                Console.WriteLine("Acquisition mode set to {0}...",st);
+                Console.WriteLine("Exposure mode set to {0}...", st);
             }
             catch (SpinnakerException ex)
             {
@@ -948,7 +948,7 @@ namespace AFPv2
                 if (iExposureModeContinuous == null || !iExposureMode.IsReadable)
                 {
                     Console.WriteLine(
-                        "Unable to set acquisition mode to continuous/off (enum entry retrieval). Aborting...\n");
+                        "Unable to set GainAuto mode to continuous/off (enum entry retrieval). Aborting...\n");
                     return -1;
                 }
                 iExposureMode.Value = iExposureModeContinuous.Symbolic;
@@ -1120,6 +1120,9 @@ namespace AFPv2
                 }
                 PgUserSetLoad(nodeMap_iel);// UserSetLoad
                 PgSetGamma(nodeMap_iel, 1.0); // gamma=1
+
+                PgExposureAuto(nodeMap_iel, appSettings.ExposureAuto);
+                PgGainAuto(nodeMap_iel, appSettings.GainAuto);
 
                 // Configure chunk data
                 err = ConfigureChunkData(nodeMap);

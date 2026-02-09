@@ -198,7 +198,7 @@
             // 
             this.numericUpDownStarMin.Location = new System.Drawing.Point(124, 541);
             this.numericUpDownStarMin.Name = "numericUpDownStarMin";
-            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 19);
             this.numericUpDownStarMin.TabIndex = 8;
             // 
             // timerSavePost
@@ -256,9 +256,9 @@
             this.toolStripStatusLabelFailed,
             this.toolStripStatusLabelGain,
             this.toolStripStatusLabelTemp});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 1074);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 1087);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1565, 45);
+            this.statusStrip1.Size = new System.Drawing.Size(1564, 45);
             this.statusStrip1.TabIndex = 13;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -320,14 +320,14 @@
             // 
             this.numericUpDown_daz.Location = new System.Drawing.Point(124, 590);
             this.numericUpDown_daz.Name = "numericUpDown_daz";
-            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 19);
             this.numericUpDown_daz.TabIndex = 15;
             // 
             // numericUpDown_dalt
             // 
             this.numericUpDown_dalt.Location = new System.Drawing.Point(124, 632);
             this.numericUpDown_dalt.Name = "numericUpDown_dalt";
-            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 19);
             this.numericUpDown_dalt.TabIndex = 16;
             // 
             // checkBox_DispMode
@@ -337,7 +337,7 @@
             this.checkBox_DispMode.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox_DispMode.Location = new System.Drawing.Point(12, 719);
             this.checkBox_DispMode.Name = "checkBox_DispMode";
-            this.checkBox_DispMode.Size = new System.Drawing.Size(107, 22);
+            this.checkBox_DispMode.Size = new System.Drawing.Size(81, 21);
             this.checkBox_DispMode.TabIndex = 17;
             this.checkBox_DispMode.Text = "DispMode";
             this.checkBox_DispMode.UseVisualStyleBackColor = true;
@@ -347,7 +347,7 @@
             // 
             this.numericUpDownStarCount.Location = new System.Drawing.Point(124, 674);
             this.numericUpDownStarCount.Name = "numericUpDownStarCount";
-            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 19);
             this.numericUpDownStarCount.TabIndex = 18;
             // 
             // button_mask
@@ -396,7 +396,7 @@
             this.checkBox_ExposureAuto.AutoSize = true;
             this.checkBox_ExposureAuto.Location = new System.Drawing.Point(12, 292);
             this.checkBox_ExposureAuto.Name = "checkBox_ExposureAuto";
-            this.checkBox_ExposureAuto.Size = new System.Drawing.Size(142, 22);
+            this.checkBox_ExposureAuto.Size = new System.Drawing.Size(106, 21);
             this.checkBox_ExposureAuto.TabIndex = 22;
             this.checkBox_ExposureAuto.Text = "Exposure Auto";
             this.checkBox_ExposureAuto.UseVisualStyleBackColor = true;
@@ -407,7 +407,7 @@
             this.checkBox_GainAuto.AutoSize = true;
             this.checkBox_GainAuto.Location = new System.Drawing.Point(12, 320);
             this.checkBox_GainAuto.Name = "checkBox_GainAuto";
-            this.checkBox_GainAuto.Size = new System.Drawing.Size(108, 22);
+            this.checkBox_GainAuto.Size = new System.Drawing.Size(82, 21);
             this.checkBox_GainAuto.TabIndex = 23;
             this.checkBox_GainAuto.Text = "Gain Auto";
             this.checkBox_GainAuto.UseVisualStyleBackColor = true;
@@ -425,7 +425,7 @@
             // 
             // Form1
             // 
-            this.ClientSize = new System.Drawing.Size(1565, 1119);
+            this.ClientSize = new System.Drawing.Size(1564, 1132);
             this.Controls.Add(this.label_mask);
             this.Controls.Add(this.checkBox_GainAuto);
             this.Controls.Add(this.checkBox_ExposureAuto);
