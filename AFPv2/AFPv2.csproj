@@ -159,6 +159,7 @@
     <Compile Include="Detect.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="FisheyeCameraModel.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

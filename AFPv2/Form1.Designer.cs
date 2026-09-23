@@ -60,6 +60,12 @@
             this.numericUpDown_dalt = new System.Windows.Forms.NumericUpDown();
             this.checkBox_DispMode = new System.Windows.Forms.CheckBox();
             this.numericUpDownStarCount = new System.Windows.Forms.NumericUpDown();
+            this.numericUpDownRoll = new System.Windows.Forms.NumericUpDown();
+            this.labelRoll = new System.Windows.Forms.Label();
+            this.numericUpDownTiltX = new System.Windows.Forms.NumericUpDown();
+            this.labelTiltX = new System.Windows.Forms.Label();
+            this.numericUpDownTiltY = new System.Windows.Forms.NumericUpDown();
+            this.labelTiltY = new System.Windows.Forms.Label();
             this.button_mask = new System.Windows.Forms.Button();
             this.button_test = new System.Windows.Forms.Button();
             this.timerObsOnOff = new System.Windows.Forms.Timer(this.components);
@@ -67,6 +73,8 @@
             this.checkBox_ExposureAuto = new System.Windows.Forms.CheckBox();
             this.checkBox_GainAuto = new System.Windows.Forms.CheckBox();
             this.label_mask = new System.Windows.Forms.Label();
+            this.buttonSaveOverlay = new System.Windows.Forms.Button();
+            this.buttonSavePointing = new System.Windows.Forms.Button();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).BeginInit();
@@ -74,6 +82,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_daz)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_dalt)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarCount)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownRoll)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltX)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).BeginInit();
             this.SuspendLayout();
             // 
             // ObsStart
@@ -106,6 +117,7 @@
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
+            this.pictureBox1.Paint += new System.Windows.Forms.PaintEventHandler(this.pictureBox1_Paint);
             this.pictureBox1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseClick);
             // 
             // richTextBox1
@@ -143,7 +155,7 @@
             // ShowButton
             // 
             this.ShowButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.ShowButton.Location = new System.Drawing.Point(12, 399);
+            this.ShowButton.Location = new System.Drawing.Point(11, 364);
             this.ShowButton.Name = "ShowButton";
             this.ShowButton.Size = new System.Drawing.Size(103, 33);
             this.ShowButton.TabIndex = 4;
@@ -198,7 +210,7 @@
             // 
             this.numericUpDownStarMin.Location = new System.Drawing.Point(124, 541);
             this.numericUpDownStarMin.Name = "numericUpDownStarMin";
-            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 25);
             this.numericUpDownStarMin.TabIndex = 8;
             // 
             // timerSavePost
@@ -229,7 +241,7 @@
             // 
             this.checkBoxDispAvg.AutoSize = true;
             this.checkBoxDispAvg.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.checkBoxDispAvg.Location = new System.Drawing.Point(12, 501);
+            this.checkBoxDispAvg.Location = new System.Drawing.Point(12, 511);
             this.checkBoxDispAvg.Name = "checkBoxDispAvg";
             this.checkBoxDispAvg.Size = new System.Drawing.Size(103, 24);
             this.checkBoxDispAvg.TabIndex = 10;
@@ -320,14 +332,14 @@
             // 
             this.numericUpDown_daz.Location = new System.Drawing.Point(124, 590);
             this.numericUpDown_daz.Name = "numericUpDown_daz";
-            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDown_daz.Size = new System.Drawing.Size(120, 25);
             this.numericUpDown_daz.TabIndex = 15;
             // 
             // numericUpDown_dalt
             // 
             this.numericUpDown_dalt.Location = new System.Drawing.Point(124, 632);
             this.numericUpDown_dalt.Name = "numericUpDown_dalt";
-            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 25);
             this.numericUpDown_dalt.TabIndex = 16;
             // 
             // checkBox_DispMode
@@ -337,7 +349,7 @@
             this.checkBox_DispMode.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox_DispMode.Location = new System.Drawing.Point(12, 719);
             this.checkBox_DispMode.Name = "checkBox_DispMode";
-            this.checkBox_DispMode.Size = new System.Drawing.Size(81, 21);
+            this.checkBox_DispMode.Size = new System.Drawing.Size(107, 22);
             this.checkBox_DispMode.TabIndex = 17;
             this.checkBox_DispMode.Text = "DispMode";
             this.checkBox_DispMode.UseVisualStyleBackColor = true;
@@ -347,8 +359,105 @@
             // 
             this.numericUpDownStarCount.Location = new System.Drawing.Point(124, 674);
             this.numericUpDownStarCount.Name = "numericUpDownStarCount";
-            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 19);
+            this.numericUpDownStarCount.Size = new System.Drawing.Size(120, 25);
             this.numericUpDownStarCount.TabIndex = 18;
+            // 
+            // numericUpDownRoll
+            // 
+            this.numericUpDownRoll.DecimalPlaces = 2;
+            this.numericUpDownRoll.Increment = new decimal(new int[] {
+            5,
+            0,
+            0,
+            131072});
+            this.numericUpDownRoll.Location = new System.Drawing.Point(124, 412);
+            this.numericUpDownRoll.Maximum = new decimal(new int[] {
+            360,
+            0,
+            0,
+            0});
+            this.numericUpDownRoll.Minimum = new decimal(new int[] {
+            360,
+            0,
+            0,
+            -2147483648});
+            this.numericUpDownRoll.Name = "numericUpDownRoll";
+            this.numericUpDownRoll.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownRoll.TabIndex = 100;
+            this.numericUpDownRoll.ValueChanged += new System.EventHandler(this.numericUpDownRoll_ValueChanged);
+            // 
+            // labelRoll
+            // 
+            this.labelRoll.AutoSize = true;
+            this.labelRoll.Location = new System.Drawing.Point(12, 414);
+            this.labelRoll.Name = "labelRoll";
+            this.labelRoll.Size = new System.Drawing.Size(77, 18);
+            this.labelRoll.TabIndex = 101;
+            this.labelRoll.Text = "Roll (deg)";
+            this.labelRoll.Click += new System.EventHandler(this.labelRoll_Click);
+            // 
+            // numericUpDownTiltX
+            // 
+            this.numericUpDownTiltX.DecimalPlaces = 2;
+            this.numericUpDownTiltX.Increment = new decimal(new int[] {
+            1,
+            0,
+            0,
+            65536});
+            this.numericUpDownTiltX.Location = new System.Drawing.Point(124, 443);
+            this.numericUpDownTiltX.Maximum = new decimal(new int[] {
+            90,
+            0,
+            0,
+            0});
+            this.numericUpDownTiltX.Minimum = new decimal(new int[] {
+            90,
+            0,
+            0,
+            -2147483648});
+            this.numericUpDownTiltX.Name = "numericUpDownTiltX";
+            this.numericUpDownTiltX.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownTiltX.TabIndex = 104;
+            this.numericUpDownTiltX.ValueChanged += new System.EventHandler(this.numericUpDownTiltX_ValueChanged_1);
+            // 
+            // labelTiltX
+            // 
+            this.labelTiltX.Location = new System.Drawing.Point(12, 445);
+            this.labelTiltX.Name = "labelTiltX";
+            this.labelTiltX.Size = new System.Drawing.Size(100, 23);
+            this.labelTiltX.TabIndex = 105;
+            this.labelTiltX.Text = "Tilt X(deg)";
+            // 
+            // numericUpDownTiltY
+            // 
+            this.numericUpDownTiltY.DecimalPlaces = 2;
+            this.numericUpDownTiltY.Increment = new decimal(new int[] {
+            1,
+            0,
+            0,
+            65536});
+            this.numericUpDownTiltY.Location = new System.Drawing.Point(124, 474);
+            this.numericUpDownTiltY.Maximum = new decimal(new int[] {
+            90,
+            0,
+            0,
+            0});
+            this.numericUpDownTiltY.Minimum = new decimal(new int[] {
+            90,
+            0,
+            0,
+            -2147483648});
+            this.numericUpDownTiltY.Name = "numericUpDownTiltY";
+            this.numericUpDownTiltY.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownTiltY.TabIndex = 102;
+            // 
+            // labelTiltY
+            // 
+            this.labelTiltY.Location = new System.Drawing.Point(12, 476);
+            this.labelTiltY.Name = "labelTiltY";
+            this.labelTiltY.Size = new System.Drawing.Size(100, 23);
+            this.labelTiltY.TabIndex = 103;
+            this.labelTiltY.Text = "Tilt Y(deg)";
             // 
             // button_mask
             // 
@@ -396,7 +505,7 @@
             this.checkBox_ExposureAuto.AutoSize = true;
             this.checkBox_ExposureAuto.Location = new System.Drawing.Point(12, 292);
             this.checkBox_ExposureAuto.Name = "checkBox_ExposureAuto";
-            this.checkBox_ExposureAuto.Size = new System.Drawing.Size(106, 21);
+            this.checkBox_ExposureAuto.Size = new System.Drawing.Size(142, 22);
             this.checkBox_ExposureAuto.TabIndex = 22;
             this.checkBox_ExposureAuto.Text = "Exposure Auto";
             this.checkBox_ExposureAuto.UseVisualStyleBackColor = true;
@@ -407,7 +516,7 @@
             this.checkBox_GainAuto.AutoSize = true;
             this.checkBox_GainAuto.Location = new System.Drawing.Point(12, 320);
             this.checkBox_GainAuto.Name = "checkBox_GainAuto";
-            this.checkBox_GainAuto.Size = new System.Drawing.Size(82, 21);
+            this.checkBox_GainAuto.Size = new System.Drawing.Size(108, 22);
             this.checkBox_GainAuto.TabIndex = 23;
             this.checkBox_GainAuto.Text = "Gain Auto";
             this.checkBox_GainAuto.UseVisualStyleBackColor = true;
@@ -423,6 +532,27 @@
             this.label_mask.TabIndex = 24;
             this.label_mask.Text = "label1";
             // 
+            // buttonSaveOverlay
+            // 
+            this.buttonSaveOverlay.Font = new System.Drawing.Font("MS UI Gothic", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.buttonSaveOverlay.Location = new System.Drawing.Point(12, 595);
+            this.buttonSaveOverlay.Name = "buttonSaveOverlay";
+            this.buttonSaveOverlay.Size = new System.Drawing.Size(103, 32);
+            this.buttonSaveOverlay.TabIndex = 99;
+            this.buttonSaveOverlay.Text = "SaveOverlay";
+            this.buttonSaveOverlay.UseVisualStyleBackColor = true;
+            this.buttonSaveOverlay.Click += new System.EventHandler(this.buttonSaveOverlay_Click);
+            // 
+            // buttonSavePointing
+            // 
+            this.buttonSavePointing.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.buttonSavePointing.Location = new System.Drawing.Point(124, 363);
+            this.buttonSavePointing.Name = "buttonSavePointing";
+            this.buttonSavePointing.Size = new System.Drawing.Size(120, 36);
+            this.buttonSavePointing.TabIndex = 100;
+            this.buttonSavePointing.Text = "設定保存";
+            this.buttonSavePointing.Click += new System.EventHandler(this.buttonSavePointing_Click);
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1564, 1132);
@@ -437,6 +567,14 @@
             this.Controls.Add(this.numericUpDown_dalt);
             this.Controls.Add(this.numericUpDown_daz);
             this.Controls.Add(this.buttonMove);
+            this.Controls.Add(this.buttonSaveOverlay);
+            this.Controls.Add(this.buttonSavePointing);
+            this.Controls.Add(this.numericUpDownTiltY);
+            this.Controls.Add(this.labelTiltY);
+            this.Controls.Add(this.numericUpDownTiltX);
+            this.Controls.Add(this.labelTiltX);
+            this.Controls.Add(this.numericUpDownRoll);
+            this.Controls.Add(this.labelRoll);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.label_X2Y2);
             this.Controls.Add(this.checkBoxDispAvg);
@@ -461,6 +599,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_daz)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_dalt)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarCount)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownRoll)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltX)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -498,14 +639,23 @@
         private System.Windows.Forms.NumericUpDown numericUpDown_dalt;
         private System.Windows.Forms.CheckBox checkBox_DispMode;
         private System.Windows.Forms.NumericUpDown numericUpDownStarCount;
+        private System.Windows.Forms.NumericUpDown numericUpDownRoll;
+        private System.Windows.Forms.Label labelRoll;
+        private System.Windows.Forms.NumericUpDown numericUpDownTiltX;
+        private System.Windows.Forms.Label labelTiltX;
+        private System.Windows.Forms.NumericUpDown numericUpDownTiltY;
+        private System.Windows.Forms.Label labelTiltY;
         private System.Windows.Forms.ToolStripStatusLabel toolStripStatusLabelTemp;
         private System.Windows.Forms.Button button_mask;
         private System.Windows.Forms.Button button_test;
         private System.Windows.Forms.Timer timerObsOnOff;
         private System.Windows.Forms.Button buttonUserSetLoad;
+        private System.Windows.Forms.Button buttonSaveOverlay;
+        private System.Windows.Forms.Button buttonSavePointing;
         private System.Windows.Forms.CheckBox checkBox_ExposureAuto;
         private System.Windows.Forms.CheckBox checkBox_GainAuto;
         private System.Windows.Forms.Label label_mask;
+        private System.Windows.Forms.NumericUpDown numericUpDown1;
     }
 }
 

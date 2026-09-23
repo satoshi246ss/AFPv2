@@ -284,7 +284,7 @@ namespace AFPv2
 
         public void SettingsSave(Settings sett)
         {
-            string fileName = string.Format("settings{00}.config", sett.ID);  //@"C:\test\settings.config";
+            string fileName = string.Format("settings{00}.config", sett.CameraID);  //@"C:\test\settings.config";
 
             //＜XMLファイルに書き込む＞
             //XmlSerializerオブジェクトを作成
@@ -296,6 +296,7 @@ namespace AFPv2
             serializer1.Serialize(sw, sett);
             //閉じる
             sw.Close();
+            // Also save Roll/Tilt values to settings file when controls change
         }
         public Settings SettingsLoad(int ID)
         {
@@ -354,6 +355,10 @@ namespace AFPv2
             sett.SaveDrive = "C:";
             sett.AviMaxFrame = 6000;
             sett.uEye_AOI_use = false;
+            // default pointing error offsets
+            sett.Roll = 0.0;
+            sett.TiltX = 0.0;
+            sett.TiltY = 0.0;
             SettingsSave(sett);
 
             // MT2 Basler Guide
@@ -1530,22 +1535,32 @@ namespace AFPv2
             get_star_pos(id, out az, out alt, out mag);
             if (alt >= 0)
             {
-                udpkv.azalt2cxcy_fish2(az, alt, az_c, alt_c, theta_c, fl, ccdpx, ccdpy, ref cx2, ref cy2);
-            } else
+                //udpkv.azalt2cxcy_fish2(az, alt, az_c, alt_c, theta_c, fl, ccdpx, ccdpy, ref cx2, ref cy2);
+                //double rolldeg = 0.0;// 180.0:  Roll angle in degrees 北が下の画像（現在のFish2の向き）
+                //fish2.SetPointingError(0.0, 0.0, rolldeg); // Set pointing error to zero for testing
+                fish2.HorizontalToPixel(az, alt, out cx2, out cy2);
+                
+                string ss = string.Format("Star count:{0} {1} Az:{2} {3} CX:{4} CY:{5}\n", id, star.ID, az, alt, cx2, cy2);
+                richTextBox1.Focus(); richTextBox1.AppendText(ss);
+            }
+            else
             {
                 cx2 = -99999; cy2 = -99999;
             }
             star.ID = id;
-            star.Xcal = cx2;
-            star.Ycal = cy2;
+            star.Xcal = cx2 - fish2.Width / 2;
+            star.Ycal = cy2 - fish2.Height / 2;
 
             r_mag = (int)(r_base - r_p * mag);
             cx = (int)cx2;
             cy = (int)cy2;
+
+            //string s = string.Format("Star count:{0} {1} Az:{2} {3}\n", star.ID, star.Name, star.Az, star.Alt);
+            //string s = string.Format("Star count:{0} {1} Az:{2} {3} CX:{4} CY:{5}\n", star.ID, star.Name, az, alt,cx,cy);
+            //richTextBox1.Focus(); richTextBox1.AppendText(s);
         }
         // display表示用星位置計算
-        private int cal_star_disp_pos( double theta_c,
-               double fl, double ccdpx, double ccdpy )
+        private int cal_star_disp_pos( double theta_c, double fl, double ccdpx, double ccdpy )
         {
             int cx, cy, r_mag, ii=0, stnum=0;
 
@@ -1556,7 +1571,7 @@ namespace AFPv2
                 {
                     get_star_disp_pos_fish2(i, 0, 0, theta_c, fl, ccdpx, ccdpy, out cx, out cy, out r_mag);
                     if (cx > -99990) stnum++;
-                    if (get_star_pos_alt(i) >= 0.0) ii++;
+                    if (get_star_pos_alt(i) > 0.0) ii++;
                 }
             }
             return ii;
@@ -1571,7 +1586,7 @@ namespace AFPv2
             alt = star.Alt;
             mag = star.Mag;
 
-            //string s = string.Format("Star count:{0} {1} Az:{2} {3}\n", Star.ID, Star.Name, Star.Az, Star.Alt);
+            //string s = string.Format("Star count:{0} {1} Az:{2} {3}\n", star.ID, star.Name, star.Az, star.Alt);
             //richTextBox1.Focus(); richTextBox1.AppendText(s);
         }
         private double get_star_pos_alt(int id)

@@ -254,7 +254,7 @@ namespace AFPv2
                                 //mat2.SaveImage("mat2.jpg");
 
                                 long microseconds = sw.ElapsedTicks / (System.Diagnostics.Stopwatch.Frequency / (1000L * 1000L));
-                                Console.WriteLine("OnImageEvent CopyTo : " + frame_id.ToString() +": ("+ sw.ElapsedMilliseconds.ToString()+")ms "+microseconds );
+                                //Console.WriteLine("OnImageEvent CopyTo : " + frame_id.ToString() +": ("+ sw.ElapsedMilliseconds.ToString()+")ms "+microseconds );
                             }
                         }
                         catch (SpinnakerException ex)
@@ -697,7 +697,7 @@ namespace AFPv2
                         Interlocked.Exchange(ref imgdata_static_flag, 0);
                         sw.Stop();
                         long microseconds = sw.ElapsedTicks / (System.Diagnostics.Stopwatch.Frequency / (1000L * 1000L));
-                        Console.WriteLine("imgdata_static_push_FIFO() : " + pgr_frame_id.ToString() + ": (" + sw.ElapsedMilliseconds.ToString() + ")ms " + microseconds);
+                        //Console.WriteLine("imgdata_static_push_FIFO() : " + pgr_frame_id.ToString() + ": (" + sw.ElapsedMilliseconds.ToString() + ")ms " + microseconds);
 
                         // update パラメータ
                         if (pgr_frame_id % 32 == 0) // about 1sec

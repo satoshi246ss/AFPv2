@@ -17,6 +17,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -28,6 +29,15 @@ namespace AFPv2
     {
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         Star star = new Star();
+
+        public AllSkyCamera.FisheyeCameraModel fish2 = new AllSkyCamera.FisheyeCameraModel(2608, 2608, 2.7 / 0.00345);
+
+        // オーバーレイ表示用ビットマップとロック
+        private Bitmap overlayBitmap = null;
+        private readonly object overlayLock = new object();
+        // 星位置計算の間隔制御
+        private DateTime lastStarCalc = DateTime.MinValue;
+        private double starCalcIntervalSec = 3.0; // 数秒ごとに再計算（変更可）
 
         public Form1()
         {
@@ -42,6 +52,8 @@ namespace AFPv2
                 //アプリケーションを終了する
                 Application.Exit();
             }
+
+
             if (cmds[1].StartsWith("/vi") || cmds[1].StartsWith("/an"))  // analog camera VideoInputを使用
             {
                 cam_maker = Camera_Maker.analog;
@@ -143,6 +155,26 @@ namespace AFPv2
             }
             Pid_Data_Send_Init();
             star.init(); // starデータ初期化
+
+            // Fish2 camera model initialization
+            //public AllSkyCamera.FisheyeCameraModel fish2 = new AllSkyCamera.FisheyeCameraModel(2608, 2608, 2.7 / 0.00345);
+            // Load roll/tilt from settings and apply to fish2
+            try
+            {
+                double rolldeg = appSettings.Roll; // Roll angle in degrees
+                double tiltXdeg = appSettings.TiltX;
+                double tiltYdeg = appSettings.TiltY;
+
+                numericUpDownRoll.Value = (decimal)appSettings.Roll; // Roll angle in degrees
+                numericUpDownTiltX.Value = (decimal)appSettings.TiltX;
+                numericUpDownTiltY.Value = (decimal)appSettings.TiltY;
+
+                fish2.SetPointingError(tiltXdeg, tiltYdeg, rolldeg);
+            }
+            catch
+            {
+                // ignore if settings are unavailable
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -551,7 +583,7 @@ namespace AFPv2
 
         private void CloseButton_Click(object sender, EventArgs e)
         {
-            this.Close();
+
         }
 
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
@@ -1084,40 +1116,115 @@ namespace AFPv2
                 img_dmk3.Circle(new OpenCvSharp.Point((int)Math.Round(gx), (int)Math.Round(gy)), (int)(10), new Scalar(0, 100, 255));
                 //cvwin.Image = imgAvg;
 
-                // Star display for Fish2
+                // Star display for Fish2: オーバーレイ用に描画情報を収集し、別ビットマップで重ねる
                 if (appSettings.NoCapDev == 1)
                 {
-                    string appendText="";
+                    string appendText = "";
                     double cx, cy, r_mag;
+                    //int cx, cy, r_mag;
                     int r_base = 10;
                     int r_p = 2;
                     int star_disp_count = 0;
-                    for (int i = 0; i < star.Count; ++i)
-                    {
-                        get_star_CCD_pos(i, out cx, out cy, out r_mag);
-                        //get_star_disp_pos(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpx, out cx, out cy, out r_mag);
-                        if ( get_star_pos_alt(i)>0.0 )
-                        {
-                            r_mag = (int)(r_base - r_p * r_mag);
 
-                            OCPoint.X = (int)(appSettings.Xoa + cx);
-                            OCPoint.Y = (int)(appSettings.Yoa + cy);
-                            Cv2.Circle(img_dmk3, OCPoint, (int)(2 * r_mag), new Scalar(0, 255, 0));
-                            //NLogInfo(OCPoint.ToString() + " " + r_mag.ToString() + " ");///
-                            appendText += i.ToString()+" cx:"+cx.ToString() +" cy:" +cy.ToString() +" " + OCPoint.ToString() + " " + r_mag.ToString() + " " + Environment.NewLine;
-                            star_disp_count++;
+                    // 星位置は頻繁に変化しないため、一定間隔でのみ再計算する
+                    bool needCalc = (DateTime.Now - lastStarCalc).TotalSeconds >= starCalcIntervalSec || overlayBitmap == null;
+                    if (needCalc)
+                    {
+                        var starPoints = new List<Tuple<int,int,int>>(); // px,py,radius
+
+                        for (int i = 0; i < star.Count; ++i)
+                        {
+                            //get_star_disp_pos_fish2(i, 0, 0, appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpy, out cx, out cy, out r_mag);//appSettings.Theta, appSettings.FocalLength, appSettings.Ccdpx, appSettings.Ccdpy
+                            get_star_CCD_pos(i, out cx, out cy, out r_mag);
+                            if (get_star_pos_alt(i) > 0.0)
+                            {
+                                int calcMag = (int)(r_base - r_p * r_mag);
+                                int radius = Math.Max(2, Math.Abs(2 * calcMag));
+
+                                int px = (int)Math.Round(appSettings.Xoa + cx);
+                                int py = (int)Math.Round(appSettings.Yoa + cy);
+
+                                if (px >= 0 && py >= 0 && px < img_dmk3.Width && py < img_dmk3.Height)
+                                {
+                                    starPoints.Add(new Tuple<int,int,int>(px, py, radius));
+                                    appendText += i.ToString() + " cx:" + cx.ToString() + " cy:" + cy.ToString() + " px:" + px.ToString() + " py:" + py.ToString() + " r:" + radius.ToString() + " " + Environment.NewLine;
+                                    star_disp_count++;
+                                }
+                                else
+                                {
+                                    appendText += i.ToString() + " OOB cx:" + cx.ToString() + " cy:" + cy.ToString() + " px:" + px.ToString() + " py:" + py.ToString() + " " + Environment.NewLine;
+                                }
+                            }
                         }
+
+                        // overlayBitmap を新規作成して描画
+                        if (starPoints.Count > 0)
+                        {
+                            Bitmap overlay = new Bitmap(img_dmk3.Width, img_dmk3.Height, PixelFormat.Format32bppArgb);
+                            using (Graphics g = Graphics.FromImage(overlay))
+                            {
+                                g.Clear(Color.Transparent);
+                                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                                // 塗りつぶしなしで輪郭のみ描画。明るさに応じて線幅を変える。
+                                foreach (var t in starPoints)
+                                {
+                                    int cxp = t.Item1;
+                                    int cyp = t.Item2;
+                                    int r = t.Item3;
+                                    int penWidth = 1; //Math.Max(1, r / 3);
+                                    using (Pen p = new Pen(Color.FromArgb(220, 0, 255, 0), penWidth))
+                                    {
+                                        p.Alignment = System.Drawing.Drawing2D.PenAlignment.Center;
+                                        g.DrawEllipse(p, cxp - r, cyp - r, r * 2, r * 2);
+                                    }
+                                }
+                            }
+
+                            lock (overlayLock)
+                            {
+                                var old = overlayBitmap;
+                                overlayBitmap = overlay;
+                                try { old?.Dispose(); } catch { }
+                            }
+
+                            // PictureBox を再描画
+                            try { this.Invoke(new Action(() => pictureBox1.Invalidate())); }
+                            catch { pictureBox1.Invalidate(); }
+                        }
+
+                        // 更新時刻を記録
+                        lastStarCalc = DateTime.Now;
+                        System.IO.File.AppendAllText("appendtext.txt", appendText);
+                        label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
                     }
+
                     System.IO.File.AppendAllText("appendtext.txt", appendText);
-                    label_mask.Text = star_disp_count.ToString() + "( "+star_visible_num.ToString() + " )";
-                }                
+                    label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
+                }
 
                 try
                 {
                     //Cv2.ImShow("PB test", img_dmk3);//Cv2.WaitKey();
                     //Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
                     Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
-                    pictureBox1.Image = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
+                    // UI スレッドで画像を更新し、古い Image を破棄して GDI リソースを確保
+                    var bmp = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
+                    try
+                    {
+                        this.Invoke(new Action(() =>
+                        {
+                            var old = pictureBox1.Image;
+                            pictureBox1.Image = bmp;
+                            try { old?.Dispose(); } catch { }
+                        }));
+                    }
+                    catch
+                    {
+                        // Invoke に失敗した場合は直接セット（可能性は低いが保険）
+                        var old = pictureBox1.Image;
+                        pictureBox1.Image = bmp;
+                        try { old?.Dispose(); } catch { }
+                    }
 
                     //int fid = frame_id % 16;
                     //String filename = "pictureboxImg-" + fid + ".jpg";
@@ -1284,7 +1391,7 @@ namespace AFPv2
         private void imgdata_push_FIFO()
         {
             // 文字入れ
-            //String str = String.Format("ID:{0,6:D1} ", imgdata.id) + imgdata.t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F1})", gx, gy, max_val);
+            //String str = String.Format("ID:{0,6:D1} ", imgdata.id) + imgdata.t.ToString("yyyyMMdd_HHmmss_fff") + String.Format(" ({0,6:F1},{1,6:F1})({2,6:F0})({3,0:00}), th:{7,6:F1}", gx, gy, max_val, max_label, frame_id, daz, dalt, theta_c);
             //img_dmk.PutText(str, new CvPoint(10, 460), font, new Scalar(255, 100, 100));
 
             //try
@@ -1332,6 +1439,58 @@ namespace AFPv2
             this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, s });
         }
 
+        // PictureBox の表示領域取得（SizeMode = Zoom を考慮）
+        private Rectangle GetPictureBoxImageRect(PictureBox pb)
+        {
+            if (pb.Image == null) return Rectangle.Empty;
+            int imgW = pb.Image.Width;
+            int imgH = pb.Image.Height;
+            int pbW = pb.ClientSize.Width;
+            int pbH = pb.ClientSize.Height;
+            float imgRatio = (float)imgW / imgH;
+            float pbRatio = (float)pbW / pbH;
+            int drawW, drawH;
+            if (imgRatio > pbRatio)
+            {
+                drawW = pbW;
+                drawH = (int)(pbW / imgRatio);
+            }
+            else
+            {
+                drawH = pbH;
+                drawW = (int)(pbH * imgRatio);
+            }
+            int x = (pbW - drawW) / 2;
+            int y = (pbH - drawH) / 2;
+            return new Rectangle(x, y, drawW, drawH);
+        }
+
+        private void pictureBox1_Paint(object sender, PaintEventArgs e)
+        {
+            // オーバーレイがあれば描画する
+            Bitmap overlay = null;
+            lock (overlayLock)
+            {
+                if (overlayBitmap != null) overlay = (Bitmap)overlayBitmap.Clone();
+            }
+            if (overlay != null)
+            {
+                try
+                {
+                    var rect = GetPictureBoxImageRect(pictureBox1);
+                    if (!rect.IsEmpty)
+                    {
+                        e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        e.Graphics.DrawImage(overlay, rect);
+                    }
+                }
+                finally
+                {
+                    try { overlay.Dispose(); } catch { }
+                }
+            }
+        }
+
         private void flowLayoutPanel1_Paint(object sender, PaintEventArgs e)
         {
 
@@ -1357,6 +1516,109 @@ namespace AFPv2
         private void numericUpDownStarMin_ValueChanged(object sender, EventArgs e)
         {
 
+        }
+
+        private void numericUpDownRoll_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                // numericUpDownRoll stores degrees; update fish2 model roll and preserve current tiltX/tiltY
+                double roll = (double)numericUpDownRoll.Value;
+                // Read tilt values defensively to avoid exceptions if controls are not yet initialized
+                double tiltX = 0.0, tiltY = 0.0;
+                try { tiltX = (double)numericUpDownTiltX.Value; } catch { }
+                try { tiltY = (double)numericUpDownTiltY.Value; } catch { }
+                fish2.SetPointingError(tiltX, tiltY, roll);
+                // If you need to refresh overlays immediately, force recalculation
+                lastStarCalc = DateTime.MinValue; // force recalculation on next display update
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private void numericUpDownTiltX_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                // numericUpDownRoll stores degrees; update fish2 model roll
+                double roll = (double)numericUpDownRoll.Value;
+                double tiltX = (double)numericUpDownTiltX.Value;
+                double tiltY = (double)numericUpDownTiltY.Value;
+                fish2.SetPointingError(tiltX, tiltY, roll);
+                // If you need to refresh overlays immediately, force recalculation
+                lastStarCalc = DateTime.MinValue; // force recalculation on next display update
+            }
+            catch { }
+        }
+
+        private void numericUpDownTiltY_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                // numericUpDownRoll stores degrees; update fish2 model roll
+                double roll = (double)numericUpDownRoll.Value;
+                double tiltX = (double)numericUpDownTiltX.Value;
+                double tiltY = (double)numericUpDownTiltY.Value;
+                fish2.SetPointingError(tiltX, tiltY, roll);
+                // If you need to refresh overlays immediately, force recalculation
+                lastStarCalc = DateTime.MinValue; // force recalculation on next display update
+            }
+            catch { }
+        }
+        private void buttonSavePointing_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Read current values from controls and save to appSettings
+                appSettings.Roll = (double)numericUpDownRoll.Value;
+                appSettings.TiltX = (double)numericUpDownTiltX.Value;
+                appSettings.TiltY = (double)numericUpDownTiltY.Value;
+                // Save settings to file
+                SettingsSave(appSettings);
+                MessageBox.Show("Pointing values saved to settings.", "Save Pointing", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to save pointing values: " + ex.Message, "Save Pointing", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void buttonSaveOverlay_Click(object sender, EventArgs e)
+        {
+            // overlayBitmap をロックして保存
+            Bitmap copy = null;
+            lock (overlayLock)
+            {
+                if (overlayBitmap != null)
+                {
+                    try { copy = (Bitmap)overlayBitmap.Clone(); } catch { copy = null; }
+                }
+            }
+
+            if (copy == null)
+            {
+                MessageBox.Show("Overlay image is not available.", "Save Overlay", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "overlays");
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                string fn = Path.Combine(dir, "overlay_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".png");
+                copy.Save(fn, ImageFormat.Png);
+                MessageBox.Show("Saved: " + fn, "Save Overlay", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to save overlay: " + ex.Message, "Save Overlay", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                try { copy.Dispose(); } catch { }
+            }
         }
 
         private void checkBoxDispAvg_CheckedChanged(object sender, EventArgs e)
@@ -1386,6 +1648,21 @@ namespace AFPv2
 
         private void button_test_Click(object sender, EventArgs e)
         {
+            var fish2 = new AllSkyCamera.FisheyeCameraModel(2608, 2608, 2.7 / 0.00345);
+            double rolldeg = 180.0;// 180.0:  Roll angle in degrees 北が下の画像（現在のFish2の向き）
+            fish2.SetPointingError(0.0, 0.0, rolldeg); // Set pointing error to zero for testing
+            double az  = 266.9747;
+            double alt = 38.389666;
+
+            fish2.HorizontalToPixel(az, alt, out double px, out double py);
+            Console.WriteLine("az,alt:({0}, {1}) px,py;({2}, {3})", az, alt, px, py);
+
+            az = 0; alt = 35.01986;
+            fish2.HorizontalToPixel(az, alt, out px, out py);
+            Console.WriteLine("az,alt:({0}, {1}) px,py;({2}, {3})", az, alt, px, py);
+
+            return;
+
             SimpleBlobDetector.Params param = new SimpleBlobDetector.Params();
             param.MaxArea = 100000;
            // SimpleBlobDetector detector = SimpleBlobDetector.Create(param);
@@ -1472,6 +1749,16 @@ namespace AFPv2
                 PgGainAuto(nodeMap_iel, false);
                 PgSetGain(nodeMap_iel, appSettings.Gain);
             }
+        }
+
+        private void numericUpDownTiltX_ValueChanged_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void labelRoll_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
