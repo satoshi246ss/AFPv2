@@ -1536,12 +1536,10 @@ namespace AFPv2
             if (alt >= 0)
             {
                 //udpkv.azalt2cxcy_fish2(az, alt, az_c, alt_c, theta_c, fl, ccdpx, ccdpy, ref cx2, ref cy2);
-                //double rolldeg = 0.0;// 180.0:  Roll angle in degrees 北が下の画像（現在のFish2の向き）
-                //fish2.SetPointingError(0.0, 0.0, rolldeg); // Set pointing error to zero for testing
                 fish2.HorizontalToPixel(az, alt, out cx2, out cy2);
                 
-                string ss = string.Format("Star count:{0} {1} Az:{2} {3} CX:{4} CY:{5}\n", id, star.ID, az, alt, cx2, cy2);
-                richTextBox1.Focus(); richTextBox1.AppendText(ss);
+                //string ss = string.Format("Star count:{0} {1} Az:{2} {3} CX:{4} CY:{5}\n", id, star.ID, az, alt, cx2, cy2);
+                //richTextBox1.Focus(); richTextBox1.AppendText(ss);
             }
             else
             {

@@ -67,21 +67,21 @@ namespace AFPv2
         public int Height { get; set; }
 
         private double _focal_length;
-        public double FocalLength
+        public double FocalLength //[mm]
         {
             get { return _focal_length; }
             set { _focal_length = value; }
         }
 
         private double _ccdpx;
-        public double Ccdpx
+        public double Ccdpx //[mm]
         {
             get { return _ccdpx; }
             set { _ccdpx = value; }
         }
 
         private double _ccdpy;
-        public double Ccdpy
+        public double Ccdpy //[mm]
         {
             get { return _ccdpy; }
             set { _ccdpy = value; }
@@ -113,6 +113,28 @@ namespace AFPv2
         {
             get { return _theta; }
             set { _theta = value; }
+        }
+
+        // Pointing error offsets (degrees)
+        private double _roll;
+        public double Roll
+        {
+            get { return _roll; }
+            set { _roll = value; }
+        }
+
+        private double _tiltX;
+        public double TiltX
+        {
+            get { return _tiltX; }
+            set { _tiltX = value; }
+        }
+
+        private double _tiltY;
+        public double TiltY
+        {
+            get { return _tiltY; }
+            set { _tiltY = value; }
         }
 
         private int _pixel_clock;

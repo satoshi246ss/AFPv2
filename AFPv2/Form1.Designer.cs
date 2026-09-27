@@ -33,6 +33,7 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
+            this.pictureBoxLoupe = new System.Windows.Forms.PictureBox();
             this.timerMTmonSend = new System.Windows.Forms.Timer(this.components);
             this.timerSaveTimeOver = new System.Windows.Forms.Timer(this.components);
             this.ObsEndButton = new System.Windows.Forms.Button();
@@ -70,13 +71,19 @@
             this.button_test = new System.Windows.Forms.Button();
             this.timerObsOnOff = new System.Windows.Forms.Timer(this.components);
             this.buttonUserSetLoad = new System.Windows.Forms.Button();
+            this.checkBoxLoupe = new System.Windows.Forms.CheckBox();
+            this.numericUpDownLoupeZoom = new System.Windows.Forms.NumericUpDown();
+            this.numericUpDownLoupeSize = new System.Windows.Forms.NumericUpDown();
             this.checkBox_ExposureAuto = new System.Windows.Forms.CheckBox();
             this.checkBox_GainAuto = new System.Windows.Forms.CheckBox();
             this.label_mask = new System.Windows.Forms.Label();
             this.buttonSaveOverlay = new System.Windows.Forms.Button();
             this.buttonSavePointing = new System.Windows.Forms.Button();
+            this.numericFocalLength = new System.Windows.Forms.NumericUpDown();
+            this.labelFocalLength = new System.Windows.Forms.Label();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxLoupe)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).BeginInit();
             this.statusStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown_daz)).BeginInit();
@@ -85,6 +92,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownRoll)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltX)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeZoom)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeSize)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericFocalLength)).BeginInit();
             this.SuspendLayout();
             // 
             // ObsStart
@@ -119,6 +129,8 @@
             this.pictureBox1.TabStop = false;
             this.pictureBox1.Paint += new System.Windows.Forms.PaintEventHandler(this.pictureBox1_Paint);
             this.pictureBox1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseClick);
+            this.pictureBox1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseDown);
+            this.pictureBox1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.pictureBox1_MouseMove);
             // 
             // richTextBox1
             // 
@@ -130,6 +142,18 @@
             this.richTextBox1.Size = new System.Drawing.Size(1313, 182);
             this.richTextBox1.TabIndex = 2;
             this.richTextBox1.Text = "";
+            // 
+            // pictureBoxLoupe
+            // 
+            this.pictureBoxLoupe.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pictureBoxLoupe.Location = new System.Drawing.Point(153, 26);
+            this.pictureBoxLoupe.Name = "pictureBoxLoupe";
+            this.pictureBoxLoupe.Size = new System.Drawing.Size(200, 200);
+            this.pictureBoxLoupe.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pictureBoxLoupe.TabIndex = 200;
+            this.pictureBoxLoupe.TabStop = false;
+            this.pictureBoxLoupe.Visible = false;
+            this.pictureBoxLoupe.Click += new System.EventHandler(this.pictureBoxLoupe_Click);
             // 
             // timerMTmonSend
             // 
@@ -208,7 +232,7 @@
             // 
             // numericUpDownStarMin
             // 
-            this.numericUpDownStarMin.Location = new System.Drawing.Point(124, 541);
+            this.numericUpDownStarMin.Location = new System.Drawing.Point(124, 581);
             this.numericUpDownStarMin.Name = "numericUpDownStarMin";
             this.numericUpDownStarMin.Size = new System.Drawing.Size(120, 25);
             this.numericUpDownStarMin.TabIndex = 8;
@@ -241,7 +265,7 @@
             // 
             this.checkBoxDispAvg.AutoSize = true;
             this.checkBoxDispAvg.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.checkBoxDispAvg.Location = new System.Drawing.Point(12, 511);
+            this.checkBoxDispAvg.Location = new System.Drawing.Point(12, 537);
             this.checkBoxDispAvg.Name = "checkBoxDispAvg";
             this.checkBoxDispAvg.Size = new System.Drawing.Size(103, 24);
             this.checkBoxDispAvg.TabIndex = 10;
@@ -320,7 +344,7 @@
             // buttonMove
             // 
             this.buttonMove.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.buttonMove.Location = new System.Drawing.Point(12, 541);
+            this.buttonMove.Location = new System.Drawing.Point(17, 567);
             this.buttonMove.Name = "buttonMove";
             this.buttonMove.Size = new System.Drawing.Size(103, 48);
             this.buttonMove.TabIndex = 14;
@@ -330,14 +354,14 @@
             // 
             // numericUpDown_daz
             // 
-            this.numericUpDown_daz.Location = new System.Drawing.Point(124, 590);
+            this.numericUpDown_daz.Location = new System.Drawing.Point(124, 612);
             this.numericUpDown_daz.Name = "numericUpDown_daz";
             this.numericUpDown_daz.Size = new System.Drawing.Size(120, 25);
             this.numericUpDown_daz.TabIndex = 15;
             // 
             // numericUpDown_dalt
             // 
-            this.numericUpDown_dalt.Location = new System.Drawing.Point(124, 632);
+            this.numericUpDown_dalt.Location = new System.Drawing.Point(124, 643);
             this.numericUpDown_dalt.Name = "numericUpDown_dalt";
             this.numericUpDown_dalt.Size = new System.Drawing.Size(120, 25);
             this.numericUpDown_dalt.TabIndex = 16;
@@ -500,6 +524,60 @@
             this.buttonUserSetLoad.UseVisualStyleBackColor = true;
             this.buttonUserSetLoad.Click += new System.EventHandler(this.buttonUserSetLoad_Click);
             // 
+            // checkBoxLoupe
+            // 
+            this.checkBoxLoupe.Location = new System.Drawing.Point(137, 241);
+            this.checkBoxLoupe.Name = "checkBoxLoupe";
+            this.checkBoxLoupe.Size = new System.Drawing.Size(30, 25);
+            this.checkBoxLoupe.TabIndex = 100;
+            this.checkBoxLoupe.CheckedChanged += new System.EventHandler(this.checkBoxLoupe_CheckedChanged);
+            // 
+            // numericUpDownLoupeZoom
+            // 
+            this.numericUpDownLoupeZoom.Location = new System.Drawing.Point(173, 241);
+            this.numericUpDownLoupeZoom.Maximum = new decimal(new int[] {
+            20,
+            0,
+            0,
+            0});
+            this.numericUpDownLoupeZoom.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDownLoupeZoom.Name = "numericUpDownLoupeZoom";
+            this.numericUpDownLoupeZoom.Size = new System.Drawing.Size(71, 25);
+            this.numericUpDownLoupeZoom.TabIndex = 101;
+            this.numericUpDownLoupeZoom.Value = new decimal(new int[] {
+            3,
+            0,
+            0,
+            0});
+            this.numericUpDownLoupeZoom.ValueChanged += new System.EventHandler(this.numericUpDownLoupeZoom_ValueChanged);
+            this.numericUpDownLoupeZoom.VisibleChanged += new System.EventHandler(this.numericUpDownLoupeZoom_VisibleChanged);
+            // 
+            // numericUpDownLoupeSize
+            // 
+            this.numericUpDownLoupeSize.Location = new System.Drawing.Point(173, 272);
+            this.numericUpDownLoupeSize.Maximum = new decimal(new int[] {
+            500,
+            0,
+            0,
+            0});
+            this.numericUpDownLoupeSize.Minimum = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
+            this.numericUpDownLoupeSize.Name = "numericUpDownLoupeSize";
+            this.numericUpDownLoupeSize.Size = new System.Drawing.Size(71, 25);
+            this.numericUpDownLoupeSize.TabIndex = 102;
+            this.numericUpDownLoupeSize.Value = new decimal(new int[] {
+            100,
+            0,
+            0,
+            0});
+            // 
             // checkBox_ExposureAuto
             // 
             this.checkBox_ExposureAuto.AutoSize = true;
@@ -535,7 +613,7 @@
             // buttonSaveOverlay
             // 
             this.buttonSaveOverlay.Font = new System.Drawing.Font("MS UI Gothic", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.buttonSaveOverlay.Location = new System.Drawing.Point(12, 595);
+            this.buttonSaveOverlay.Location = new System.Drawing.Point(17, 625);
             this.buttonSaveOverlay.Name = "buttonSaveOverlay";
             this.buttonSaveOverlay.Size = new System.Drawing.Size(103, 32);
             this.buttonSaveOverlay.TabIndex = 99;
@@ -553,9 +631,37 @@
             this.buttonSavePointing.Text = "設定保存";
             this.buttonSavePointing.Click += new System.EventHandler(this.buttonSavePointing_Click);
             // 
+            // numericFocalLength
+            // 
+            this.numericFocalLength.DecimalPlaces = 2;
+            this.numericFocalLength.Increment = new decimal(new int[] {
+            1,
+            0,
+            0,
+            131072});
+            this.numericFocalLength.Location = new System.Drawing.Point(124, 505);
+            this.numericFocalLength.Name = "numericFocalLength";
+            this.numericFocalLength.Size = new System.Drawing.Size(120, 25);
+            this.numericFocalLength.TabIndex = 201;
+            this.numericFocalLength.Value = new decimal(new int[] {
+            27,
+            0,
+            0,
+            65536});
+            // 
+            // labelFocalLength
+            // 
+            this.labelFocalLength.Location = new System.Drawing.Point(12, 505);
+            this.labelFocalLength.Name = "labelFocalLength";
+            this.labelFocalLength.Size = new System.Drawing.Size(100, 23);
+            this.labelFocalLength.TabIndex = 202;
+            this.labelFocalLength.Text = "FL(mm)";
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1564, 1132);
+            this.Controls.Add(this.labelFocalLength);
+            this.Controls.Add(this.numericFocalLength);
             this.Controls.Add(this.label_mask);
             this.Controls.Add(this.checkBox_GainAuto);
             this.Controls.Add(this.checkBox_ExposureAuto);
@@ -568,6 +674,9 @@
             this.Controls.Add(this.numericUpDown_daz);
             this.Controls.Add(this.buttonMove);
             this.Controls.Add(this.buttonSaveOverlay);
+            this.Controls.Add(this.checkBoxLoupe);
+            this.Controls.Add(this.numericUpDownLoupeZoom);
+            this.Controls.Add(this.numericUpDownLoupeSize);
             this.Controls.Add(this.buttonSavePointing);
             this.Controls.Add(this.numericUpDownTiltY);
             this.Controls.Add(this.labelTiltY);
@@ -586,6 +695,7 @@
             this.Controls.Add(this.ShowButton);
             this.Controls.Add(this.ObsEndButton);
             this.Controls.Add(this.panel1);
+            this.Controls.Add(this.pictureBoxLoupe);
             this.Controls.Add(this.ObsStart);
             this.Name = "Form1";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
@@ -593,6 +703,7 @@
             this.Shown += new System.EventHandler(this.Form1_Shown);
             this.panel1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBoxLoupe)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownStarMin)).EndInit();
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
@@ -602,6 +713,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownRoll)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltX)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeZoom)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeSize)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericFocalLength)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -651,11 +765,18 @@
         private System.Windows.Forms.Timer timerObsOnOff;
         private System.Windows.Forms.Button buttonUserSetLoad;
         private System.Windows.Forms.Button buttonSaveOverlay;
+        private System.Windows.Forms.CheckBox checkBoxLoupe;
+        private System.Windows.Forms.NumericUpDown numericUpDownLoupeZoom;
+        private System.Windows.Forms.NumericUpDown numericFocalLength;
+        private System.Windows.Forms.NumericUpDown numericUpDownLoupeSize;
+        private System.Windows.Forms.PictureBox pictureBoxLoupe;
         private System.Windows.Forms.Button buttonSavePointing;
         private System.Windows.Forms.CheckBox checkBox_ExposureAuto;
         private System.Windows.Forms.CheckBox checkBox_GainAuto;
         private System.Windows.Forms.Label label_mask;
         private System.Windows.Forms.NumericUpDown numericUpDown1;
+        private System.Windows.Forms.Label labelFocalLength;
+        private System.Windows.Forms.CheckBox checkBoxGrid;
     }
 }
 

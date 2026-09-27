@@ -6,6 +6,7 @@ using OpenCvSharp.XFeatures2D;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 //using OpenCvSharp.Blob;
 //using VideoInputSharp;
@@ -35,13 +36,28 @@ namespace AFPv2
         // オーバーレイ表示用ビットマップとロック
         private Bitmap overlayBitmap = null;
         private readonly object overlayLock = new object();
+        // グリッド表示用チェックボックス（ランタイム生成）
+        //private System.Windows.Forms.CheckBox checkBoxGrid = null;
+        // loupe用の診断ログを間引くためのタイムスタンプ
+        private DateTime lastLoupeLog = DateTime.MinValue;
         // 星位置計算の間隔制御
         private DateTime lastStarCalc = DateTime.MinValue;
         private double starCalcIntervalSec = 3.0; // 数秒ごとに再計算（変更可）
+        private double loupeZoom = 4.0; // loupeのズーム倍率（変更可）
+        // List to store clicked pixel positions
+        private System.Collections.Generic.List<System.Drawing.Point> clickedPixels = new System.Collections.Generic.List<System.Drawing.Point>();
+        // Last loupe point updated via Shift+MouseMove (-1,-1 means none)
+        private System.Drawing.Point loupePoint = new System.Drawing.Point(-1, -1);
+    // ルーペの表示中心を保持（PictureBox のクライアント座標）
+    private System.Drawing.Point loupeCenter = new System.Drawing.Point(-1, -1);
+    private bool loupeCenterInitialized = false;
+    // ルーペ更新用タイマー（4fps）
+    private System.Windows.Forms.Timer loupeTimer = null;
+
 
         public Form1()
         {
-            InitializeComponent();             
+            InitializeComponent();
             timeBeginPeriod(time_period);
 
             //コマンドライン引数を配列で取得する
@@ -51,8 +67,7 @@ namespace AFPv2
             {
                 //アプリケーションを終了する
                 Application.Exit();
-            }
-
+            } 
 
             if (cmds[1].StartsWith("/vi") || cmds[1].StartsWith("/an"))  // analog camera VideoInputを使用
             {
@@ -90,6 +105,8 @@ namespace AFPv2
 
             // setting load
             appSettings = SettingsLoad(int.Parse(cmds[2]));
+
+            // initialize loupe controls defaults (handled elsewhere)
 
             IplImageInit();
 
@@ -157,7 +174,7 @@ namespace AFPv2
             star.init(); // starデータ初期化
 
             // Fish2 camera model initialization
-            //public AllSkyCamera.FisheyeCameraModel fish2 = new AllSkyCamera.FisheyeCameraModel(2608, 2608, 2.7 / 0.00345);
+            fish2 = new AllSkyCamera.FisheyeCameraModel(appSettings.Width, appSettings.Height, appSettings.FocalLength / appSettings.Ccdpx );// (2608, 2608, 2.7 / 0.00345);
             // Load roll/tilt from settings and apply to fish2
             try
             {
@@ -175,6 +192,35 @@ namespace AFPv2
             {
                 // ignore if settings are unavailable
             }
+
+            // Add a runtime checkbox to toggle Az/Alt grid overlay next to existing controls
+            try
+            {
+                checkBoxGrid = new System.Windows.Forms.CheckBox();
+                checkBoxGrid.Text = "Show Az/Alt Grid";
+                checkBoxGrid.AutoSize = true;
+                checkBoxGrid.Checked = false;
+                checkBoxGrid.Location = new System.Drawing.Point(10, 680);
+                checkBoxGrid.CheckedChanged += (s, e) => { try { this.Invoke(new Action(() => pictureBox1.Invalidate())); } catch { pictureBox1.Invalidate(); } };
+                this.Controls.Add(checkBoxGrid);
+            }
+            catch { }
+
+            // Initialize numericFocalLength control if present
+            try
+            {
+                if (numericFocalLength != null)
+                {
+                    numericFocalLength.DecimalPlaces = 2;
+                    numericFocalLength.Increment = new decimal(new int[] {1,0,0,131072}); // 0.01 mm
+                    numericFocalLength.Minimum = new decimal(new int[] {1,0,0,0});
+                    numericFocalLength.Maximum = new decimal(new int[] {1000,0,0,0});
+                    numericFocalLength.Value = (decimal)appSettings.FocalLength;
+                    numericFocalLength.ValueChanged -= numericFocalLength_ValueChanged;
+                    numericFocalLength.ValueChanged += numericFocalLength_ValueChanged;
+                }
+            }
+            catch { }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -481,7 +527,7 @@ namespace AFPv2
         //ストップウオッチの時間を表示する
         private void ShowRText(object sender, string str)
         {
-            RichTextBox rtb = (RichTextBox)sender;　//objectをキャストする
+            RichTextBox rtb = (RichTextBox)sender; //objectをキャストする
             rtb.AppendText(str);
         }
         private void ShowText(object sender, string str)
@@ -773,10 +819,60 @@ namespace AFPv2
                 }
             }
         }
-            #region TimerTick
-            //
-            // Timer Tick
-            private void timerSaveTimeOver_Tick(object sender, EventArgs e)
+        
+
+        private void numericUpDownLoupeZoom_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                // numericUpDown configured with DecimalPlaces=0, so Value maps directly to magnification (e.g. 2 => 2x)
+                loupeZoom = (double)numericUpDownLoupeZoom.Value;
+            }
+            catch { }
+        }
+
+        private void numericUpDownLoupeSize_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                int v = (int)numericUpDownLoupeSize.Value;
+                pictureBoxLoupe.Width = Math.Max(50, Math.Min(600, v));
+                pictureBoxLoupe.Height = Math.Max(50, Math.Min(600, v));
+            }
+            catch { }
+        }
+
+        private void numericFocalLength_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                // numericFocalLength is in mm. Update appSettings and fish2 accordingly.
+                double fl_mm = (double)numericFocalLength.Value;
+                appSettings.FocalLength = fl_mm;
+                // Update fish2 focal length in px/rad: focal(mm) / ccd_px(mm)
+                if (fish2 != null)
+                {
+                    try
+                    {
+                        double f_px = fl_mm / appSettings.Ccdpx;
+                        fish2.FocalLengthPx = f_px;
+                        // Mark any cached star positions to be recalculated
+                        lastStarCalc = DateTime.MinValue;
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+
+        // 保険: コンストラクタ内の波括弧のバランスを保つためのノート（編集で波括弧を削除した際の保険）
+
+
+        #region TimerTick
+        //
+        // Timer Tick
+        private void timerSaveTimeOver_Tick(object sender, EventArgs e)
         {
             timerSaveTimeOver.Stop();
             timerSavePost.Stop();
@@ -1195,7 +1291,7 @@ namespace AFPv2
                         // 更新時刻を記録
                         lastStarCalc = DateTime.Now;
                         System.IO.File.AppendAllText("appendtext.txt", appendText);
-                        label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
+                        //label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
                     }
 
                     System.IO.File.AppendAllText("appendtext.txt", appendText);
@@ -1206,7 +1302,7 @@ namespace AFPv2
                 {
                     //Cv2.ImShow("PB test", img_dmk3);//Cv2.WaitKey();
                     //Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
-                    Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
+                    //Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
                     // UI スレッドで画像を更新し、古い Image を破棄して GDI リソースを確保
                     var bmp = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
                     try
@@ -1435,8 +1531,50 @@ namespace AFPv2
 
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
-            string s = string.Format("(x,y)=({0},{1})\n", e.X, e.Y);
-            this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, s });
+            try
+            {
+                // Map mouse coords in PictureBox to image pixel coords
+                if (pictureBox1.Image == null) return;
+                Rectangle imgRect = GetPictureBoxImageRect(pictureBox1);
+                if (imgRect.IsEmpty) return;
+                double scaleX = (double)pictureBox1.Image.Width / imgRect.Width;
+                double scaleY = (double)pictureBox1.Image.Height / imgRect.Height;
+                int ix = (int)((e.X - imgRect.X) * scaleX);
+                int iy = (int)((e.Y - imgRect.Y) * scaleY);
+
+                // Add to a list of clicked pixel positions (create if needed)
+                try
+                {
+                    if (clickedPixels == null) clickedPixels = new System.Collections.Generic.List<System.Drawing.Point>();
+                }
+                catch { }
+                try { clickedPixels.Add(new System.Drawing.Point(ix, iy)); } catch { }
+
+                // Convert to horizontal coordinates using fish2 (Pixel -> Az/Alt)
+                string outstr = "";
+                try
+                {
+                    double azDeg, altDeg;
+                    if (fish2 != null && fish2.PixelToHorizontal(ix, iy, out azDeg, out altDeg))
+                    {
+                        outstr = string.Format("Pixel=({0},{1}) => Az={2:F3}°, Alt={3:F3}°\n", ix, iy, azDeg, altDeg);
+                    }
+                    else
+                    {
+                        outstr = string.Format("Pixel=({0},{1}) => Az/Alt out of range\n", ix, iy);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    outstr = string.Format("Pixel=({0},{1}) => conversion error: {2}\n", ix, iy, ex.Message);
+                }
+
+                this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, outstr });
+            }
+            catch (Exception ex)
+            {
+                try { this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() }); } catch { }
+            }
         }
 
         // PictureBox の表示領域取得（SizeMode = Zoom を考慮）
@@ -1482,6 +1620,64 @@ namespace AFPv2
                     {
                         e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                         e.Graphics.DrawImage(overlay, rect);
+
+                        // Draw Az/Alt grid if enabled
+                        bool drawGrid = false;
+                        try { if (checkBoxGrid != null) drawGrid = checkBoxGrid.Checked; } catch { drawGrid = false; }
+                        if (drawGrid && fish2 != null)
+                        {
+                            try
+                            {
+                                // Draw azimuth circles every 30 degrees and altitude lines every 15 degrees
+                                using (Pen pen = new Pen(Color.FromArgb(160, 255, 255, 0), 1))
+                                {
+                                    pen.Alignment = System.Drawing.Drawing2D.PenAlignment.Center;
+                                    // For each altitude (0..90 step 15): draw circle of constant altitude
+                                    for (int alt = 0; alt <= 90; alt += 15)
+                                    {
+                                        // sample many azimuths to get circle points
+                                        var pts = new System.Collections.Generic.List<System.Drawing.PointF>();
+                                        for (int a = 0; a < 360; a += 5)
+                                        {
+                                            double xpx, ypx;
+                                            if (fish2.HorizontalToPixel(a, alt, out xpx, out ypx))
+                                            {
+                                                // Map image pixel to pictureBox coords
+                                                double px = rect.X + (xpx / pictureBox1.Image.Width) * rect.Width;
+                                                double py = rect.Y + (ypx / pictureBox1.Image.Height) * rect.Height;
+                                                pts.Add(new System.Drawing.PointF((float)px, (float)py));
+                                            }
+                                        }
+                                        if (pts.Count > 1)
+                                        {
+                                            e.Graphics.DrawLines(pen, pts.ToArray());
+                                        }
+                                    }
+
+                                    // Azimuth radial lines every 30 degrees
+                                    for (int a = 0; a < 360; a += 30)
+                                    {
+                                        // draw line from center to edge: sample altitudes from 0 to Max
+                                        var pts = new System.Collections.Generic.List<System.Drawing.PointF>();
+                                        for (int alt = 0; alt <= 90; alt += 2)
+                                        {
+                                            double xpx, ypx;
+                                            if (fish2.HorizontalToPixel(a, alt, out xpx, out ypx))
+                                            {
+                                                double px = rect.X + (xpx / pictureBox1.Image.Width) * rect.Width;
+                                                double py = rect.Y + (ypx / pictureBox1.Image.Height) * rect.Height;
+                                                pts.Add(new System.Drawing.PointF((float)px, (float)py));
+                                            }
+                                        }
+                                        if (pts.Count > 1)
+                                        {
+                                            e.Graphics.DrawLines(pen, pts.ToArray());
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
                     }
                 }
                 finally
@@ -1723,6 +1919,156 @@ namespace AFPv2
                 MessageBox.Show(error.ToString());
             }
         }
+        private void checkBoxLoupe_CheckedChanged(object sender, EventArgs e)
+        {
+            bool enabled = false;
+            try { enabled = checkBoxLoupe.Checked; } catch { }
+            pictureBoxLoupe.Visible = enabled;
+            if (enabled)
+            {
+                try { pictureBoxLoupe.BringToFront(); } catch { }
+            }
+        }
+
+        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
+        {
+            try
+            {
+                // If loupe not enabled or no image, hide loupe
+                bool loupeOn = false;
+                try { loupeOn = checkBoxLoupe.Checked; } catch { loupeOn = false; }
+                if (!loupeOn || pictureBox1.Image == null)
+                {
+                    pictureBoxLoupe.Visible = false;
+                    return;
+                }
+
+                // Always keep loupe visible while enabled
+                pictureBoxLoupe.Visible = true;
+
+                // Decide whether we're actively moving the loupe (Shift down) or keeping it fixed
+                bool shiftDown = (Control.ModifierKeys & Keys.Shift) == Keys.Shift;
+
+                // If Shift is down, update loupe screen position to follow the cursor and set loupeCenter.
+                if (shiftDown)
+                {
+                    loupeCenter = new System.Drawing.Point(e.X, e.Y);
+                    loupeCenterInitialized = true;
+                    try
+                    {
+                        var ptScreen = pictureBox1.PointToScreen(new System.Drawing.Point(e.X, e.Y));
+                        var ptClient = this.PointToClient(ptScreen);
+                        int lx = ptClient.X + 20;
+                        int ly = ptClient.Y + 20;
+                        // keep inside form bounds
+                        lx = Math.Min(Math.Max(0, lx), this.ClientSize.Width - pictureBoxLoupe.Width);
+                        ly = Math.Min(Math.Max(0, ly), this.ClientSize.Height - pictureBoxLoupe.Height);
+                        pictureBoxLoupe.Location = new System.Drawing.Point(lx, ly);
+                        pictureBoxLoupe.BringToFront();
+                    }
+                    catch { }
+                }
+                else
+                {
+                    // Shift is OFF: keep loupe position fixed. Initialize loupeCenter on first use.
+                    if (!loupeCenterInitialized)
+                    {
+                        loupeCenter = new System.Drawing.Point(e.X, e.Y);
+                        loupeCenterInitialized = true;
+                    }
+                    // Do not change pictureBoxLoupe.Location here (keep fixed on screen).
+                }
+
+                // Use the target point (in PictureBox client coords) for cropping/coordinate conversion.
+                System.Drawing.Point targetPbPoint = shiftDown ? new System.Drawing.Point(e.X, e.Y) : loupeCenter;
+
+                // Create a direct clone of the current image (MouseMove runs on UI thread)
+                Image img = pictureBox1.Image;
+                if (img == null) return;
+
+                Rectangle imgRect = GetPictureBoxImageRect(pictureBox1);
+                if (imgRect.IsEmpty) return;
+
+                // Map pictureBox point to image coordinates
+                double scaleX = (double)img.Width / imgRect.Width;
+                double scaleY = (double)img.Height / imgRect.Height;
+                int ix = (int)((targetPbPoint.X - imgRect.X) * scaleX);
+                int iy = (int)((targetPbPoint.Y - imgRect.Y) * scaleY);
+
+ 
+                int sw = Math.Max(1, pictureBoxLoupe.Width);
+                int sh = Math.Max(1, pictureBoxLoupe.Height);
+                // Determine source window size in image pixels based on zoom
+                // loupeZoom = 1.0 means 1:1 (no magnification). Larger values zoom in.
+                int srcW = Math.Max(1, (int)((sw / Math.Max(0.0001, loupeZoom)) * scaleX));
+                int srcH = Math.Max(1, (int)((sh / Math.Max(0.0001, loupeZoom)) * scaleY));
+                int sx = ix - srcW / 2;
+                int sy = iy - srcH / 2;
+                if (sx < 0) sx = 0;
+                if (sy < 0) sy = 0;
+                if (sx + srcW > img.Width) sx = Math.Max(0, img.Width - srcW);
+                if (sy + srcH > img.Height) sy = Math.Max(0, img.Height - srcH);
+
+                using (Bitmap src = new Bitmap(img))
+                {
+                    // Pre-compose overlay onto the source image so loupe shows stars
+                    try
+                    {
+                        Bitmap ov = null;
+                        lock (overlayLock)
+                        {
+                            if (overlayBitmap != null)
+                            {
+                                try { ov = (Bitmap)overlayBitmap.Clone(); } catch { ov = null; }
+                            }
+                        }
+                        if (ov != null)
+                        {
+                            try
+                            {
+                                using (Graphics go = Graphics.FromImage(src))
+                                {
+                                    go.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                                    go.DrawImage(ov, new Rectangle(0, 0, src.Width, src.Height));
+                                }
+                            }
+                            catch { }
+                            try { ov.Dispose(); } catch { }
+                        }
+                    }
+                    catch { }
+                    using (Bitmap crop = new Bitmap(srcW, srcH))
+                    {
+                        using (Graphics g = Graphics.FromImage(crop))
+                        {
+                            g.DrawImage(src, new Rectangle(0, 0, srcW, srcH), new Rectangle(sx, sy, srcW, srcH), GraphicsUnit.Pixel);
+                        }
+                        // Scale crop to loupe display size
+                        Bitmap display = new Bitmap(sw, sh);
+                        // Timestamp bump for rebuild - no functional change
+                        using (Graphics g2 = Graphics.FromImage(display))
+                        {
+                            g2.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                            g2.DrawImage(crop, new Rectangle(0, 0, sw, sh), new Rectangle(0, 0, srcW, srcH), GraphicsUnit.Pixel);
+                        }
+                        var old = pictureBoxLoupe.Image;
+                        pictureBoxLoupe.Image = display;
+                        try { old?.Dispose(); } catch { }
+                        // Diagnostic trace occasionally
+                        if ((DateTime.Now - lastLoupeLog).TotalMilliseconds > 500)
+                        {
+                            lastLoupeLog = DateTime.Now;
+                            // avoid heavy logging; write to richTextBox1 for quick local check
+                            //try { richTextBox1.AppendText($"Loupe updated at {DateTime.Now:HH:mm:ss.fff}\n"); } catch { }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // ignore any loupe errors
+            }
+        }
 
         private void buttonUserSetLoad_Click(object sender, EventArgs e)
         {
@@ -1757,6 +2103,16 @@ namespace AFPv2
         }
 
         private void labelRoll_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pictureBoxLoupe_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void numericUpDownLoupeZoom_VisibleChanged(object sender, EventArgs e)
         {
 
         }
