@@ -130,7 +130,7 @@ namespace AFPv2
                 CopyMemory(src, dest, AllocSize);
             }
 
-            //
+            /*
             void write_image(IManagedImage image, int imageCnt)
             {
                 // Convert image
@@ -150,7 +150,7 @@ namespace AFPv2
                     image.Save(filename);
                     Console.WriteLine("Image saved at {0}\n", filename);
                 }
-            }
+            }*/
             //
             // This function converts between Spinnaker::ImagePtr container to cv::Mat container used in OpenCV.
             //

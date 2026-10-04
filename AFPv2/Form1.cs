@@ -788,7 +788,7 @@ namespace AFPv2
             star_adaptive_threshold = (int)numericUpDownStarMin.Value; // kenyou  0-5 月、惑星  6:シリウス　7:ベガ
 
             // Make Mask
-            StreamReader sr = new StreamReader(@"../../mask_data.csv");
+            StreamReader sr = new StreamReader(@"mask_data.csv");
             {
                 // 末尾まで繰り返す
                 while (!sr.EndOfStream)
@@ -1215,7 +1215,7 @@ namespace AFPv2
                 // Star display for Fish2: オーバーレイ用に描画情報を収集し、別ビットマップで重ねる
                 if (appSettings.NoCapDev == 1)
                 {
-                    string appendText = "";
+                    // appendText removed to avoid frequent file I/O in display loop
                     double cx, cy, r_mag;
                     //int cx, cy, r_mag;
                     int r_base = 10;
@@ -1243,12 +1243,7 @@ namespace AFPv2
                                 if (px >= 0 && py >= 0 && px < img_dmk3.Width && py < img_dmk3.Height)
                                 {
                                     starPoints.Add(new Tuple<int,int,int>(px, py, radius));
-                                    appendText += i.ToString() + " cx:" + cx.ToString() + " cy:" + cy.ToString() + " px:" + px.ToString() + " py:" + py.ToString() + " r:" + radius.ToString() + " " + Environment.NewLine;
                                     star_disp_count++;
-                                }
-                                else
-                                {
-                                    appendText += i.ToString() + " OOB cx:" + cx.ToString() + " cy:" + cy.ToString() + " px:" + px.ToString() + " py:" + py.ToString() + " " + Environment.NewLine;
                                 }
                             }
                         }
@@ -1283,18 +1278,26 @@ namespace AFPv2
                                 try { old?.Dispose(); } catch { }
                             }
 
-                            // PictureBox を再描画
-                            try { this.Invoke(new Action(() => pictureBox1.Invalidate())); }
+                            // PictureBox を非同期で再描画（UI スレッドをブロックしない）
+                            try
+                            {
+                                if (this.IsHandleCreated)
+                                {
+                                    this.BeginInvoke(new Action(() => pictureBox1.Invalidate()));
+                                }
+                                else
+                                {
+                                    pictureBox1.Invalidate();
+                                }
+                            }
                             catch { pictureBox1.Invalidate(); }
                         }
 
                         // 更新時刻を記録
                         lastStarCalc = DateTime.Now;
-                        System.IO.File.AppendAllText("appendtext.txt", appendText);
-                        //label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
                     }
 
-                    System.IO.File.AppendAllText("appendtext.txt", appendText);
+                    // file logging removed from display loop
                     label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
                 }
 
@@ -1307,20 +1310,47 @@ namespace AFPv2
                     var bmp = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
                     try
                     {
-                        this.Invoke(new Action(() =>
+                        if (this.IsHandleCreated)
+                        {
+                            this.BeginInvoke(new Action(() =>
+                            {
+                                var old = pictureBox1.Image;
+                                pictureBox1.Image = bmp;
+                                try { old?.Dispose(); } catch { }
+                            }));
+                        }
+                        else
                         {
                             var old = pictureBox1.Image;
                             pictureBox1.Image = bmp;
                             try { old?.Dispose(); } catch { }
-                        }));
+                        }
                     }
                     catch
                     {
-                        // Invoke に失敗した場合は直接セット（可能性は低いが保険）
-                        var old = pictureBox1.Image;
-                        pictureBox1.Image = bmp;
-                        try { old?.Dispose(); } catch { }
+                        try { var old = pictureBox1.Image; pictureBox1.Image = bmp; try { old?.Dispose(); } catch { } } catch { }
                     }
+
+                    // Also request loupe update on UI thread so loupe follows latest main image
+                    try
+                    {
+                        if (this.IsHandleCreated)
+                        {
+                            this.BeginInvoke(new Action(() =>
+                            {
+                                try
+                                {
+                                    bool loupeOn = false;
+                                    try { loupeOn = checkBoxLoupe.Checked; } catch { loupeOn = false; }
+                                    if (!loupeOn || pictureBox1.Image == null) return;
+                                    var target = loupeCenterInitialized ? loupeCenter : new System.Drawing.Point(pictureBox1.ClientSize.Width / 2, pictureBox1.ClientSize.Height / 2);
+                                    UpdateLoupe(target);
+                                }
+                                catch { }
+                            }));
+                        }
+                    }
+                    catch { }
 
                     //int fid = frame_id % 16;
                     //String filename = "pictureboxImg-" + fid + ".jpg";
@@ -1857,6 +1887,13 @@ namespace AFPv2
             fish2.HorizontalToPixel(az, alt, out px, out py);
             Console.WriteLine("az,alt:({0}, {1}) px,py;({2}, {3})", az, alt, px, py);
 
+
+            string videoSourcee = @"D:\img_data\data\20260630_235211_566_1.avi";
+            string trackerCamHost = @"192.168.1.221";
+            int cameraport = 22222;
+            string outbasedir = @"D:\img_data\data\";
+            MeteorDetection.UsageExample.Run(videoSourcee, trackerCamHost, cameraport, outbasedir, fish2);
+
             return;
 
             SimpleBlobDetector.Params param = new SimpleBlobDetector.Params();
@@ -1954,19 +1991,32 @@ namespace AFPv2
                 {
                     loupeCenter = new System.Drawing.Point(e.X, e.Y);
                     loupeCenterInitialized = true;
-                    try
+                try
+                {
+                    var ptScreen = pictureBox1.PointToScreen(new System.Drawing.Point(e.X, e.Y));
+                    // Convert screen point to the loupe's parent client coordinates (handles when loupe is inside a panel)
+                    System.Drawing.Point ptParentClient;
+                    System.Windows.Forms.Control parent = null;
+                    try { parent = pictureBoxLoupe?.Parent; } catch { parent = null; }
+                    if (parent != null)
                     {
-                        var ptScreen = pictureBox1.PointToScreen(new System.Drawing.Point(e.X, e.Y));
-                        var ptClient = this.PointToClient(ptScreen);
-                        int lx = ptClient.X + 20;
-                        int ly = ptClient.Y + 20;
-                        // keep inside form bounds
-                        lx = Math.Min(Math.Max(0, lx), this.ClientSize.Width - pictureBoxLoupe.Width);
-                        ly = Math.Min(Math.Max(0, ly), this.ClientSize.Height - pictureBoxLoupe.Height);
-                        pictureBoxLoupe.Location = new System.Drawing.Point(lx, ly);
-                        pictureBoxLoupe.BringToFront();
+                        ptParentClient = parent.PointToClient(ptScreen);
                     }
-                    catch { }
+                    else
+                    {
+                        ptParentClient = this.PointToClient(ptScreen);
+                    }
+
+                    int lx = ptParentClient.X + 20;
+                    int ly = ptParentClient.Y + 20;
+                    // keep inside parent bounds
+                    System.Drawing.Size parentSize = (parent != null) ? parent.ClientSize : this.ClientSize;
+                    lx = Math.Min(Math.Max(0, lx), parentSize.Width - pictureBoxLoupe.Width);
+                    ly = Math.Min(Math.Max(0, ly), parentSize.Height - pictureBoxLoupe.Height);
+                    pictureBoxLoupe.Location = new System.Drawing.Point(lx, ly);
+                    try { pictureBoxLoupe.BringToFront(); } catch { }
+                }
+                catch { }
                 }
                 else
                 {
@@ -1981,71 +2031,78 @@ namespace AFPv2
 
                 // Use the target point (in PictureBox client coords) for cropping/coordinate conversion.
                 System.Drawing.Point targetPbPoint = shiftDown ? new System.Drawing.Point(e.X, e.Y) : loupeCenter;
+                // Update loupe from current image
+                try { UpdateLoupe(targetPbPoint); } catch { }
+            }
+            catch
+            {
+                // ignore any loupe errors
+            }
+        }
 
-                // Create a direct clone of the current image (MouseMove runs on UI thread)
-                Image img = pictureBox1.Image;
-                if (img == null) return;
+        // Update loupe display using a target point in pictureBox1 client coordinates.
+        private void UpdateLoupe(System.Drawing.Point targetPbPoint)
+        {
+            // If loupe not enabled or no image, skip
+            bool loupeOn = false;
+            try { loupeOn = checkBoxLoupe.Checked; } catch { loupeOn = false; }
+            if (!loupeOn) return;
+            Image img = pictureBox1.Image;
+            if (img == null) return;
 
-                Rectangle imgRect = GetPictureBoxImageRect(pictureBox1);
-                if (imgRect.IsEmpty) return;
+            Rectangle imgRect = GetPictureBoxImageRect(pictureBox1);
+            if (imgRect.IsEmpty) return;
 
-                // Map pictureBox point to image coordinates
-                double scaleX = (double)img.Width / imgRect.Width;
-                double scaleY = (double)img.Height / imgRect.Height;
-                int ix = (int)((targetPbPoint.X - imgRect.X) * scaleX);
-                int iy = (int)((targetPbPoint.Y - imgRect.Y) * scaleY);
+            double scaleX = (double)img.Width / imgRect.Width;
+            double scaleY = (double)img.Height / imgRect.Height;
+            int ix = (int)((targetPbPoint.X - imgRect.X) * scaleX);
+            int iy = (int)((targetPbPoint.Y - imgRect.Y) * scaleY);
 
- 
-                int sw = Math.Max(1, pictureBoxLoupe.Width);
-                int sh = Math.Max(1, pictureBoxLoupe.Height);
-                // Determine source window size in image pixels based on zoom
-                // loupeZoom = 1.0 means 1:1 (no magnification). Larger values zoom in.
-                int srcW = Math.Max(1, (int)((sw / Math.Max(0.0001, loupeZoom)) * scaleX));
-                int srcH = Math.Max(1, (int)((sh / Math.Max(0.0001, loupeZoom)) * scaleY));
-                int sx = ix - srcW / 2;
-                int sy = iy - srcH / 2;
-                if (sx < 0) sx = 0;
-                if (sy < 0) sy = 0;
-                if (sx + srcW > img.Width) sx = Math.Max(0, img.Width - srcW);
-                if (sy + srcH > img.Height) sy = Math.Max(0, img.Height - srcH);
+            int sw = Math.Max(1, pictureBoxLoupe.Width);
+            int sh = Math.Max(1, pictureBoxLoupe.Height);
+            int srcW = Math.Max(1, (int)((sw / Math.Max(0.0001, loupeZoom)) * scaleX));
+            int srcH = Math.Max(1, (int)((sh / Math.Max(0.0001, loupeZoom)) * scaleY));
+            int sx = ix - srcW / 2;
+            int sy = iy - srcH / 2;
+            if (sx < 0) sx = 0;
+            if (sy < 0) sy = 0;
+            if (sx + srcW > img.Width) sx = Math.Max(0, img.Width - srcW);
+            if (sy + srcH > img.Height) sy = Math.Max(0, img.Height - srcH);
 
+            try
+            {
                 using (Bitmap src = new Bitmap(img))
                 {
                     // Pre-compose overlay onto the source image so loupe shows stars
-                    try
+                    Bitmap ov = null;
+                    lock (overlayLock)
                     {
-                        Bitmap ov = null;
-                        lock (overlayLock)
+                        if (overlayBitmap != null)
                         {
-                            if (overlayBitmap != null)
-                            {
-                                try { ov = (Bitmap)overlayBitmap.Clone(); } catch { ov = null; }
-                            }
-                        }
-                        if (ov != null)
-                        {
-                            try
-                            {
-                                using (Graphics go = Graphics.FromImage(src))
-                                {
-                                    go.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
-                                    go.DrawImage(ov, new Rectangle(0, 0, src.Width, src.Height));
-                                }
-                            }
-                            catch { }
-                            try { ov.Dispose(); } catch { }
+                            try { ov = (Bitmap)overlayBitmap.Clone(); } catch { ov = null; }
                         }
                     }
-                    catch { }
+                    if (ov != null)
+                    {
+                        try
+                        {
+                            using (Graphics go = Graphics.FromImage(src))
+                            {
+                                go.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                                go.DrawImage(ov, new Rectangle(0, 0, src.Width, src.Height));
+                            }
+                        }
+                        catch { }
+                        try { ov.Dispose(); } catch { }
+                    }
+
                     using (Bitmap crop = new Bitmap(srcW, srcH))
                     {
                         using (Graphics g = Graphics.FromImage(crop))
                         {
                             g.DrawImage(src, new Rectangle(0, 0, srcW, srcH), new Rectangle(sx, sy, srcW, srcH), GraphicsUnit.Pixel);
                         }
-                        // Scale crop to loupe display size
                         Bitmap display = new Bitmap(sw, sh);
-                        // Timestamp bump for rebuild - no functional change
                         using (Graphics g2 = Graphics.FromImage(display))
                         {
                             g2.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
@@ -2054,20 +2111,14 @@ namespace AFPv2
                         var old = pictureBoxLoupe.Image;
                         pictureBoxLoupe.Image = display;
                         try { old?.Dispose(); } catch { }
-                        // Diagnostic trace occasionally
                         if ((DateTime.Now - lastLoupeLog).TotalMilliseconds > 500)
                         {
                             lastLoupeLog = DateTime.Now;
-                            // avoid heavy logging; write to richTextBox1 for quick local check
-                            //try { richTextBox1.AppendText($"Loupe updated at {DateTime.Now:HH:mm:ss.fff}\n"); } catch { }
                         }
                     }
                 }
             }
-            catch
-            {
-                // ignore any loupe errors
-            }
+            catch { }
         }
 
         private void buttonUserSetLoad_Click(object sender, EventArgs e)

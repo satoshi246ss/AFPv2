@@ -112,18 +112,19 @@
             // 
             this.panel1.Controls.Add(this.pictureBox1);
             this.panel1.Controls.Add(this.richTextBox1);
-            this.panel1.Location = new System.Drawing.Point(250, 3);
+            this.panel1.Controls.Add(this.pictureBoxLoupe);
+            this.panel1.Location = new System.Drawing.Point(644, 3);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(1557, 1137);
+            this.panel1.Size = new System.Drawing.Size(920, 1137);
             this.panel1.TabIndex = 1;
             // 
             // pictureBox1
             // 
             this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.pictureBox1.Location = new System.Drawing.Point(0, 0);
+            this.pictureBox1.Location = new System.Drawing.Point(3, 0);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(1313, 904);
+            this.pictureBox1.Size = new System.Drawing.Size(914, 904);
             this.pictureBox1.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
@@ -139,14 +140,14 @@
             this.richTextBox1.Font = new System.Drawing.Font("MS UI Gothic", 11F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.richTextBox1.Location = new System.Drawing.Point(0, 901);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(1313, 182);
+            this.richTextBox1.Size = new System.Drawing.Size(920, 182);
             this.richTextBox1.TabIndex = 2;
             this.richTextBox1.Text = "";
             // 
             // pictureBoxLoupe
             // 
             this.pictureBoxLoupe.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pictureBoxLoupe.Location = new System.Drawing.Point(153, 26);
+            this.pictureBoxLoupe.Location = new System.Drawing.Point(-107, 3);
             this.pictureBoxLoupe.Name = "pictureBoxLoupe";
             this.pictureBoxLoupe.Size = new System.Drawing.Size(200, 200);
             this.pictureBoxLoupe.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
@@ -292,9 +293,9 @@
             this.toolStripStatusLabelFailed,
             this.toolStripStatusLabelGain,
             this.toolStripStatusLabelTemp});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 1087);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 1089);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1564, 45);
+            this.statusStrip1.Size = new System.Drawing.Size(1564, 43);
             this.statusStrip1.TabIndex = 13;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -526,15 +527,16 @@
             // 
             // checkBoxLoupe
             // 
-            this.checkBoxLoupe.Location = new System.Drawing.Point(137, 241);
+            this.checkBoxLoupe.Location = new System.Drawing.Point(264, 412);
             this.checkBoxLoupe.Name = "checkBoxLoupe";
-            this.checkBoxLoupe.Size = new System.Drawing.Size(30, 25);
+            this.checkBoxLoupe.Size = new System.Drawing.Size(82, 25);
             this.checkBoxLoupe.TabIndex = 100;
+            this.checkBoxLoupe.Text = "Loupe";
             this.checkBoxLoupe.CheckedChanged += new System.EventHandler(this.checkBoxLoupe_CheckedChanged);
             // 
             // numericUpDownLoupeZoom
             // 
-            this.numericUpDownLoupeZoom.Location = new System.Drawing.Point(173, 241);
+            this.numericUpDownLoupeZoom.Location = new System.Drawing.Point(352, 412);
             this.numericUpDownLoupeZoom.Maximum = new decimal(new int[] {
             20,
             0,
@@ -549,7 +551,7 @@
             this.numericUpDownLoupeZoom.Size = new System.Drawing.Size(71, 25);
             this.numericUpDownLoupeZoom.TabIndex = 101;
             this.numericUpDownLoupeZoom.Value = new decimal(new int[] {
-            3,
+            4,
             0,
             0,
             0});
@@ -558,7 +560,7 @@
             // 
             // numericUpDownLoupeSize
             // 
-            this.numericUpDownLoupeSize.Location = new System.Drawing.Point(173, 272);
+            this.numericUpDownLoupeSize.Location = new System.Drawing.Point(352, 443);
             this.numericUpDownLoupeSize.Maximum = new decimal(new int[] {
             500,
             0,
@@ -695,7 +697,6 @@
             this.Controls.Add(this.ShowButton);
             this.Controls.Add(this.ObsEndButton);
             this.Controls.Add(this.panel1);
-            this.Controls.Add(this.pictureBoxLoupe);
             this.Controls.Add(this.ObsStart);
             this.Name = "Form1";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);

@@ -166,7 +166,7 @@ namespace AFPv2
         double set_exposure  = 3;   // [ms]            F1.8:F4  exp 8ms:3ms  gain 1024: 100  約106倍
         double set_exposure1 = 0.2; // [ms]
  
-        Mat img_dmk3, img_dmk, img2 , imgAvg, img_ueye_aoi, img_mask, img_mask2, img_dark8;
+        Mat img_dmk3, img_dmk, img2 , imgAvg, img_ueye_aoi, img_mask, img_mask2, img_dark8, img_mask8u_s;
  
         int star_adaptive_threshold = 8;
         int star_visible_num;
@@ -266,6 +266,7 @@ namespace AFPv2
             
             imgAvg    = new Mat(he, wi,  MatType.CV_32F, 1);
             img_mask2 = new Mat(he, wi,  MatType.CV_8U, 1);
+            img_mask8u_s = new Mat(he/2, wi/2,  MatType.CV_8U, 1);
 
             imgdata.init(wi, he);
             imgdata_static.init(wi, he);
