@@ -30,7 +30,7 @@ namespace MeteorDetection
         }
 
         /// <returns>更新後の背景 (CV_32F)</returns>
-        public Mat Update(Mat frame8u, Mat mask8u)
+        public Mat Update(Mat frame8u)
         {
             if (_bgF32 == null || _bgF32.Size() != frame8u.Size())
             {
@@ -40,7 +40,7 @@ namespace MeteorDetection
             }
             else
             {
-                Cv2.AccumulateWeighted(frame8u, _bgF32, _alpha, mask8u);
+                Cv2.AccumulateWeighted(frame8u, _bgF32, _alpha);
             }
             return _bgF32;
         }
@@ -99,8 +99,8 @@ namespace MeteorDetection
             _bg = new RunningAverageBackground(BackgroundAlpha);
         }
 
-        /// <summary>1フレームを処理して検出リストを返す（フル解像度座標）。mask8u_s: 処理対象領域を示す8ビットグレースケール画像(縮小解像度画像)</summary>
-        public List<Detection> Process(Mat frameGray8u, Mat mask8u_s)
+        /// <summary>1フレームを処理して検出リストを返す（フル解像度座標）。</summary>
+        public List<Detection> Process(Mat frameGray8u)
         {
             int bf = Math.Max(1, BinFactor);
             var size = new Size(Math.Max(1, frameGray8u.Width / bf), Math.Max(1, frameGray8u.Height / bf));
@@ -116,7 +116,7 @@ namespace MeteorDetection
             else
                 frameGray8u.CopyTo(_small);
 
-            var bg32 = _bg.Update(_small, mask8u_s);
+            var bg32 = _bg.Update(_small);
 
             if (_bgSmall8 == null || _bgSmall8.Size() != size)
             {

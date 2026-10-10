@@ -74,13 +74,25 @@
             this.checkBoxLoupe = new System.Windows.Forms.CheckBox();
             this.numericUpDownLoupeZoom = new System.Windows.Forms.NumericUpDown();
             this.numericUpDownLoupeSize = new System.Windows.Forms.NumericUpDown();
+            this.numericUpDownFramerate = new System.Windows.Forms.NumericUpDown();
+            this.labelFramerate = new System.Windows.Forms.Label();
             this.checkBox_ExposureAuto = new System.Windows.Forms.CheckBox();
             this.checkBox_GainAuto = new System.Windows.Forms.CheckBox();
+            this.numericUpDownExposureManual = new System.Windows.Forms.NumericUpDown();
+            this.numericUpDownGain = new System.Windows.Forms.NumericUpDown();
+            this.labelExposureValue = new System.Windows.Forms.Label();
+            this.labelGainValue = new System.Windows.Forms.Label();
             this.label_mask = new System.Windows.Forms.Label();
             this.buttonSaveOverlay = new System.Windows.Forms.Button();
             this.buttonSavePointing = new System.Windows.Forms.Button();
             this.numericFocalLength = new System.Windows.Forms.NumericUpDown();
             this.labelFocalLength = new System.Windows.Forms.Label();
+            this.labelContrast = new System.Windows.Forms.Label();
+            this.trackBarContrast = new System.Windows.Forms.TrackBar();
+            this.labelBrightness = new System.Windows.Forms.Label();
+            this.trackBarBrightness = new System.Windows.Forms.TrackBar();
+            this.numericUpDownContrast = new System.Windows.Forms.NumericUpDown();
+            this.numericUpDownBrightness = new System.Windows.Forms.NumericUpDown();
             this.panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxLoupe)).BeginInit();
@@ -94,7 +106,14 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeZoom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeSize)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownFramerate)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownExposureManual)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownGain)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericFocalLength)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarContrast)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarBrightness)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownContrast)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownBrightness)).BeginInit();
             this.SuspendLayout();
             // 
             // ObsStart
@@ -180,7 +199,7 @@
             // ShowButton
             // 
             this.ShowButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.ShowButton.Location = new System.Drawing.Point(11, 364);
+            this.ShowButton.Location = new System.Drawing.Point(11, 217);
             this.ShowButton.Name = "ShowButton";
             this.ShowButton.Size = new System.Drawing.Size(103, 33);
             this.ShowButton.TabIndex = 4;
@@ -223,7 +242,7 @@
             // ButtonSaveEnd
             // 
             this.ButtonSaveEnd.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.ButtonSaveEnd.Location = new System.Drawing.Point(11, 217);
+            this.ButtonSaveEnd.Location = new System.Drawing.Point(141, 166);
             this.ButtonSaveEnd.Name = "ButtonSaveEnd";
             this.ButtonSaveEnd.Size = new System.Drawing.Size(103, 49);
             this.ButtonSaveEnd.TabIndex = 7;
@@ -266,7 +285,7 @@
             // 
             this.checkBoxDispAvg.AutoSize = true;
             this.checkBoxDispAvg.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.checkBoxDispAvg.Location = new System.Drawing.Point(12, 537);
+            this.checkBoxDispAvg.Location = new System.Drawing.Point(264, 442);
             this.checkBoxDispAvg.Name = "checkBoxDispAvg";
             this.checkBoxDispAvg.Size = new System.Drawing.Size(103, 24);
             this.checkBoxDispAvg.TabIndex = 10;
@@ -293,9 +312,9 @@
             this.toolStripStatusLabelFailed,
             this.toolStripStatusLabelGain,
             this.toolStripStatusLabelTemp});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 1089);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 1087);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1564, 43);
+            this.statusStrip1.Size = new System.Drawing.Size(1564, 45);
             this.statusStrip1.TabIndex = 13;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -345,7 +364,7 @@
             // buttonMove
             // 
             this.buttonMove.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.buttonMove.Location = new System.Drawing.Point(17, 567);
+            this.buttonMove.Location = new System.Drawing.Point(11, 567);
             this.buttonMove.Name = "buttonMove";
             this.buttonMove.Size = new System.Drawing.Size(103, 48);
             this.buttonMove.TabIndex = 14;
@@ -536,7 +555,7 @@
             // 
             // numericUpDownLoupeZoom
             // 
-            this.numericUpDownLoupeZoom.Location = new System.Drawing.Point(352, 412);
+            this.numericUpDownLoupeZoom.Location = new System.Drawing.Point(363, 410);
             this.numericUpDownLoupeZoom.Maximum = new decimal(new int[] {
             20,
             0,
@@ -560,7 +579,7 @@
             // 
             // numericUpDownLoupeSize
             // 
-            this.numericUpDownLoupeSize.Location = new System.Drawing.Point(352, 443);
+            this.numericUpDownLoupeSize.Location = new System.Drawing.Point(440, 410);
             this.numericUpDownLoupeSize.Maximum = new decimal(new int[] {
             500,
             0,
@@ -580,9 +599,44 @@
             0,
             0});
             // 
+            // numericUpDownFramerate
+            // 
+            this.numericUpDownFramerate.DecimalPlaces = 1;
+            this.numericUpDownFramerate.Location = new System.Drawing.Point(160, 352);
+            this.numericUpDownFramerate.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.numericUpDownFramerate.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDownFramerate.Name = "numericUpDownFramerate";
+            this.numericUpDownFramerate.Size = new System.Drawing.Size(84, 25);
+            this.numericUpDownFramerate.TabIndex = 27;
+            this.numericUpDownFramerate.Value = new decimal(new int[] {
+            30,
+            0,
+            0,
+            0});
+            this.numericUpDownFramerate.ValueChanged += new System.EventHandler(this.numericUpDownFramerate_ValueChanged);
+            // 
+            // labelFramerate
+            // 
+            this.labelFramerate.AutoSize = true;
+            this.labelFramerate.Location = new System.Drawing.Point(286, 356);
+            this.labelFramerate.Name = "labelFramerate";
+            this.labelFramerate.Size = new System.Drawing.Size(30, 18);
+            this.labelFramerate.TabIndex = 28;
+            this.labelFramerate.Text = "fps";
+            // 
             // checkBox_ExposureAuto
             // 
             this.checkBox_ExposureAuto.AutoSize = true;
+            this.checkBox_ExposureAuto.Checked = true;
+            this.checkBox_ExposureAuto.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox_ExposureAuto.Location = new System.Drawing.Point(12, 292);
             this.checkBox_ExposureAuto.Name = "checkBox_ExposureAuto";
             this.checkBox_ExposureAuto.Size = new System.Drawing.Size(142, 22);
@@ -594,6 +648,8 @@
             // checkBox_GainAuto
             // 
             this.checkBox_GainAuto.AutoSize = true;
+            this.checkBox_GainAuto.Checked = true;
+            this.checkBox_GainAuto.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox_GainAuto.Location = new System.Drawing.Point(12, 320);
             this.checkBox_GainAuto.Name = "checkBox_GainAuto";
             this.checkBox_GainAuto.Size = new System.Drawing.Size(108, 22);
@@ -601,6 +657,67 @@
             this.checkBox_GainAuto.Text = "Gain Auto";
             this.checkBox_GainAuto.UseVisualStyleBackColor = true;
             this.checkBox_GainAuto.CheckedChanged += new System.EventHandler(this.checkBox_GainAuto_CheckedChanged);
+            // 
+            // numericUpDownExposureManual
+            // 
+            this.numericUpDownExposureManual.BackColor = System.Drawing.SystemColors.Window;
+            this.numericUpDownExposureManual.DecimalPlaces = 2;
+            this.numericUpDownExposureManual.Location = new System.Drawing.Point(160, 290);
+            this.numericUpDownExposureManual.Maximum = new decimal(new int[] {
+            1000,
+            0,
+            0,
+            0});
+            this.numericUpDownExposureManual.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            131072});
+            this.numericUpDownExposureManual.Name = "numericUpDownExposureManual";
+            this.numericUpDownExposureManual.Size = new System.Drawing.Size(84, 25);
+            this.numericUpDownExposureManual.TabIndex = 23;
+            this.numericUpDownExposureManual.Value = new decimal(new int[] {
+            3333,
+            0,
+            0,
+            131072});
+            this.numericUpDownExposureManual.ValueChanged += new System.EventHandler(this.numericUpDownExposureManual_ValueChanged);
+            // 
+            // numericUpDownGain
+            // 
+            this.numericUpDownGain.Location = new System.Drawing.Point(160, 320);
+            this.numericUpDownGain.Maximum = new decimal(new int[] {
+            47,
+            0,
+            0,
+            0});
+            this.numericUpDownGain.Name = "numericUpDownGain";
+            this.numericUpDownGain.Size = new System.Drawing.Size(84, 25);
+            this.numericUpDownGain.TabIndex = 25;
+            this.numericUpDownGain.Value = new decimal(new int[] {
+            18,
+            0,
+            0,
+            0});
+            this.numericUpDownGain.ValueChanged += new System.EventHandler(this.numericUpDownGain_ValueChanged);
+            // 
+            // labelExposureValue
+            // 
+            this.labelExposureValue.AutoSize = true;
+            this.labelExposureValue.Location = new System.Drawing.Point(286, 292);
+            this.labelExposureValue.Name = "labelExposureValue";
+            this.labelExposureValue.Size = new System.Drawing.Size(97, 18);
+            this.labelExposureValue.TabIndex = 24;
+            this.labelExposureValue.Text = "ms (manual)";
+            // 
+            // labelGainValue
+            // 
+            this.labelGainValue.AutoSize = true;
+            this.labelGainValue.Location = new System.Drawing.Point(286, 324);
+            this.labelGainValue.Name = "labelGainValue";
+            this.labelGainValue.Size = new System.Drawing.Size(28, 18);
+            this.labelGainValue.TabIndex = 26;
+            this.labelGainValue.Text = "dB";
             // 
             // label_mask
             // 
@@ -615,7 +732,7 @@
             // buttonSaveOverlay
             // 
             this.buttonSaveOverlay.Font = new System.Drawing.Font("MS UI Gothic", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.buttonSaveOverlay.Location = new System.Drawing.Point(17, 625);
+            this.buttonSaveOverlay.Location = new System.Drawing.Point(13, 621);
             this.buttonSaveOverlay.Name = "buttonSaveOverlay";
             this.buttonSaveOverlay.Size = new System.Drawing.Size(103, 32);
             this.buttonSaveOverlay.TabIndex = 99;
@@ -626,7 +743,7 @@
             // buttonSavePointing
             // 
             this.buttonSavePointing.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.buttonSavePointing.Location = new System.Drawing.Point(124, 363);
+            this.buttonSavePointing.Location = new System.Drawing.Point(124, 536);
             this.buttonSavePointing.Name = "buttonSavePointing";
             this.buttonSavePointing.Size = new System.Drawing.Size(120, 36);
             this.buttonSavePointing.TabIndex = 100;
@@ -659,12 +776,75 @@
             this.labelFocalLength.TabIndex = 202;
             this.labelFocalLength.Text = "FL(mm)";
             // 
+            // labelContrast
+            // 
+            this.labelContrast.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.labelContrast.AutoSize = true;
+            this.labelContrast.Location = new System.Drawing.Point(286, 481);
+            this.labelContrast.Name = "labelContrast";
+            this.labelContrast.Size = new System.Drawing.Size(73, 18);
+            this.labelContrast.TabIndex = 203;
+            this.labelContrast.Text = "Contrast";
+            // 
+            // trackBarContrast
+            // 
+            this.trackBarContrast.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.trackBarContrast.Location = new System.Drawing.Point(481, 476);
+            this.trackBarContrast.Maximum = 300;
+            this.trackBarContrast.Minimum = 50;
+            this.trackBarContrast.Name = "trackBarContrast";
+            this.trackBarContrast.Size = new System.Drawing.Size(160, 69);
+            this.trackBarContrast.TabIndex = 204;
+            this.trackBarContrast.TickFrequency = 25;
+            this.trackBarContrast.Value = 100;
+            // 
+            // labelBrightness
+            // 
+            this.labelBrightness.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.labelBrightness.AutoSize = true;
+            this.labelBrightness.Location = new System.Drawing.Point(286, 554);
+            this.labelBrightness.Name = "labelBrightness";
+            this.labelBrightness.Size = new System.Drawing.Size(86, 18);
+            this.labelBrightness.TabIndex = 205;
+            this.labelBrightness.Text = "Brightness";
+            // 
+            // trackBarBrightness
+            // 
+            this.trackBarBrightness.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.trackBarBrightness.Location = new System.Drawing.Point(481, 546);
+            this.trackBarBrightness.Maximum = 100;
+            this.trackBarBrightness.Minimum = -100;
+            this.trackBarBrightness.Name = "trackBarBrightness";
+            this.trackBarBrightness.Size = new System.Drawing.Size(160, 69);
+            this.trackBarBrightness.TabIndex = 206;
+            this.trackBarBrightness.TickFrequency = 20;
+            // 
+            // numericUpDownContrast
+            // 
+            this.numericUpDownContrast.Location = new System.Drawing.Point(404, 481);
+            this.numericUpDownContrast.Name = "numericUpDownContrast";
+            this.numericUpDownContrast.Size = new System.Drawing.Size(79, 25);
+            this.numericUpDownContrast.TabIndex = 207;
+            // 
+            // numericUpDownBrightness
+            // 
+            this.numericUpDownBrightness.Location = new System.Drawing.Point(404, 554);
+            this.numericUpDownBrightness.Name = "numericUpDownBrightness";
+            this.numericUpDownBrightness.Size = new System.Drawing.Size(79, 25);
+            this.numericUpDownBrightness.TabIndex = 208;
+            // 
             // Form1
             // 
             this.ClientSize = new System.Drawing.Size(1564, 1132);
             this.Controls.Add(this.labelFocalLength);
             this.Controls.Add(this.numericFocalLength);
             this.Controls.Add(this.label_mask);
+            this.Controls.Add(this.numericUpDownExposureManual);
+            this.Controls.Add(this.labelExposureValue);
+            this.Controls.Add(this.numericUpDownGain);
+            this.Controls.Add(this.labelGainValue);
+            this.Controls.Add(this.numericUpDownFramerate);
+            this.Controls.Add(this.labelFramerate);
             this.Controls.Add(this.checkBox_GainAuto);
             this.Controls.Add(this.checkBox_ExposureAuto);
             this.Controls.Add(this.buttonUserSetLoad);
@@ -675,6 +855,12 @@
             this.Controls.Add(this.numericUpDown_dalt);
             this.Controls.Add(this.numericUpDown_daz);
             this.Controls.Add(this.buttonMove);
+            this.Controls.Add(this.labelContrast);
+            this.Controls.Add(this.trackBarContrast);
+            this.Controls.Add(this.labelBrightness);
+            this.Controls.Add(this.trackBarBrightness);
+            this.Controls.Add(this.numericUpDownContrast);
+            this.Controls.Add(this.numericUpDownBrightness);
             this.Controls.Add(this.buttonSaveOverlay);
             this.Controls.Add(this.checkBoxLoupe);
             this.Controls.Add(this.numericUpDownLoupeZoom);
@@ -716,7 +902,14 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeZoom)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeSize)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownFramerate)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownExposureManual)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownGain)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericFocalLength)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarContrast)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBarBrightness)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownContrast)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownBrightness)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -773,9 +966,20 @@
         private System.Windows.Forms.PictureBox pictureBoxLoupe;
         private System.Windows.Forms.Button buttonSavePointing;
         private System.Windows.Forms.CheckBox checkBox_ExposureAuto;
+        private System.Windows.Forms.NumericUpDown numericUpDownExposureManual;
+        private System.Windows.Forms.Label labelExposureValue;
         private System.Windows.Forms.CheckBox checkBox_GainAuto;
+        private System.Windows.Forms.NumericUpDown numericUpDownGain;
+        private System.Windows.Forms.Label labelGainValue;
+        private System.Windows.Forms.NumericUpDown numericUpDownFramerate;
+        private System.Windows.Forms.Label labelFramerate;
         private System.Windows.Forms.Label label_mask;
-        private System.Windows.Forms.NumericUpDown numericUpDown1;
+        private System.Windows.Forms.Label labelContrast;
+        private System.Windows.Forms.TrackBar trackBarContrast;
+        private System.Windows.Forms.Label labelBrightness;
+        private System.Windows.Forms.TrackBar trackBarBrightness;
+        private System.Windows.Forms.NumericUpDown numericUpDownContrast;
+        private System.Windows.Forms.NumericUpDown numericUpDownBrightness;
         private System.Windows.Forms.Label labelFocalLength;
         private System.Windows.Forms.CheckBox checkBoxGrid;
     }

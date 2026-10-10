@@ -185,6 +185,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Ringbuf.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="StarMaskGenerator.cs" />
     <Compile Include="TrackManager.cs" />
     <Compile Include="Udp.cs" />
     <Compile Include="Udp_kv.cs" />

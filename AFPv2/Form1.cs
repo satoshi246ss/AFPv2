@@ -22,6 +22,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using SpinnakerNET.GenApi;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace AFPv2                                                                                                                                                                                                                                                                                                 
@@ -53,6 +54,7 @@ namespace AFPv2
     private bool loupeCenterInitialized = false;
     // ルーペ更新用タイマー（4fps）
     private System.Windows.Forms.Timer loupeTimer = null;
+        // Brightness / Contrast UI controls (moved to Designer)
 
 
         public Form1()
@@ -68,6 +70,8 @@ namespace AFPv2
                 //アプリケーションを終了する
                 Application.Exit();
             } 
+
+
 
             if (cmds[1].StartsWith("/vi") || cmds[1].StartsWith("/an"))  // analog camera VideoInputを使用
             {
@@ -109,6 +113,33 @@ namespace AFPv2
             // initialize loupe controls defaults (handled elsewhere)
 
             IplImageInit();
+
+            // Brightness/Contrast controls are managed by the Designer now.
+            // Wire up event handlers and initial sync between TrackBar and NumericUpDown
+            try
+            {
+                if (this.trackBarContrast != null && this.numericUpDownContrast != null)
+                {
+                    this.numericUpDownContrast.Minimum = new decimal(this.trackBarContrast.Minimum);
+                    this.numericUpDownContrast.Maximum = new decimal(this.trackBarContrast.Maximum);
+                    if (this.trackBarContrast.Value < this.trackBarContrast.Minimum) this.trackBarContrast.Value = this.trackBarContrast.Minimum;
+                    if (this.trackBarContrast.Value > this.trackBarContrast.Maximum) this.trackBarContrast.Value = this.trackBarContrast.Maximum;
+                    try { this.numericUpDownContrast.Value = new decimal(this.trackBarContrast.Value); } catch { }
+                    this.trackBarContrast.Scroll += (s, ev) => { try { this.numericUpDownContrast.Value = new decimal(this.trackBarContrast.Value); } catch { } };
+                    this.numericUpDownContrast.ValueChanged += (s, ev) => { try { this.trackBarContrast.Value = (int)this.numericUpDownContrast.Value; } catch { } };
+                }
+                if (this.trackBarBrightness != null && this.numericUpDownBrightness != null)
+                {
+                    this.numericUpDownBrightness.Minimum = new decimal(this.trackBarBrightness.Minimum);
+                    this.numericUpDownBrightness.Maximum = new decimal(this.trackBarBrightness.Maximum);
+                    if (this.trackBarBrightness.Value < this.trackBarBrightness.Minimum) this.trackBarBrightness.Value = this.trackBarBrightness.Minimum;
+                    if (this.trackBarBrightness.Value > this.trackBarBrightness.Maximum) this.trackBarBrightness.Value = this.trackBarBrightness.Maximum;
+                    try { this.numericUpDownBrightness.Value = new decimal(this.trackBarBrightness.Value); } catch { }
+                    this.trackBarBrightness.Scroll += (s, ev) => { try { this.numericUpDownBrightness.Value = new decimal(this.trackBarBrightness.Value); } catch { } };
+                    this.numericUpDownBrightness.ValueChanged += (s, ev) => { try { this.trackBarBrightness.Value = (int)this.numericUpDownBrightness.Value; } catch { } };
+                }
+            }
+            catch { }
 
             worker_udp = new BackgroundWorker();
             worker_udp.WorkerReportsProgress = true;
@@ -701,6 +732,24 @@ namespace AFPv2
                 System.Threading.Thread.Sleep(3000);
                 checkBox_ExposureAuto.Checked = appSettings.ExposureAuto;
                 checkBox_GainAuto.Checked = appSettings.GainAuto;
+                try
+                {
+                    // initialize manual controls to saved settings
+                    numericUpDownExposureManual.Value = (decimal)appSettings.Exposure;
+                }
+                catch { }
+                try
+                {
+                    numericUpDownGain.Value = (decimal)appSettings.Gain;
+                }
+                catch { }
+                try
+                {
+                    numericUpDownFramerate.Value = (decimal)appSettings.Framerate;
+                    // set requested framerate variable shown elsewhere
+                    reqFramerate = appSettings.Framerate;
+                }
+                catch { }
 
             }
             //AVT
@@ -1114,7 +1163,7 @@ namespace AFPv2
                     if (checkBoxDispAvg.Checked == true)
                     {
                         // 移動平均画像の表示
-                        double scale = 8.0;
+                        double scale = 2.0;
                         Cv2.ConvertScaleAbs(imgAvg, img_dmk, scale);
                         //Cv2.ConvertScaleAbs(fifo.backgroundImageF(), img_dmk, scale);
                         Cv2.CvtColor(img_dmk, img_dmk3, ColorConversionCodes.GRAY2BGR);
@@ -1137,8 +1186,18 @@ namespace AFPv2
                     var imgtmp = Cv2.Split(img_dmk3);
                     var imgtmp2 = ~img_mask; //反転
 
-                    Cv2.Add(imgtmp[2], imgtmp2 / 4, imgtmp[2]);
-                    Cv2.Merge(imgtmp, img_dmk3);
+                    try
+                    {
+                        Cv2.Add(imgtmp[2], imgtmp2 / 4, imgtmp[2]);//赤チャンネルにマスクを描画 '// imgtmp: Mat[]、imgtmp2: Mat を前提
+                        Cv2.Merge(imgtmp, img_dmk3);
+                    }
+                    catch (Exception ex)
+                    {
+                        //dst?.Dispose();
+                        logger?.Error("Cv2.Add failed: " + ex.ToString());
+                        // 失敗時は元のチャネルを保持して描画を継続
+                    }
+                    
                     imgtmp2.Dispose();
                     imgtmp[0].Dispose();
                     imgtmp[1].Dispose();
@@ -1219,7 +1278,7 @@ namespace AFPv2
                     double cx, cy, r_mag;
                     //int cx, cy, r_mag;
                     int r_base = 10;
-                    int r_p = 2;
+                    int r_p = 4;
                     int star_disp_count = 0;
 
                     // 星位置は頻繁に変化しないため、一定間隔でのみ再計算する
@@ -1307,7 +1366,30 @@ namespace AFPv2
                     //Cv2.ImShow("img-avg", imgAvg.PyrDown().PyrDown());
                     //Cv2.ImShow("img-avg", img_dmk3.PyrDown().PyrDown());
                     // UI スレッドで画像を更新し、古い Image を破棄して GDI リソースを確保
-                    var bmp = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3);
+                    // Apply brightness/contrast from UI controls before converting to Bitmap
+                    var bmp = (Bitmap)null;
+                    try
+                    {
+                        double alpha = 1.0;
+                        double beta = 0.0;
+                        try
+                        {
+                            if (trackBarContrast != null) alpha = (double)trackBarContrast.Value / 100.0;
+                            if (trackBarBrightness != null) beta = (double)trackBarBrightness.Value;
+                        }
+                        catch { }
+
+                        using (var img_disp = new Mat())
+                        {
+                            try { Cv2.ConvertScaleAbs(img_dmk3, img_disp, alpha, beta); } catch { img_disp.Dispose(); throw; }
+                            bmp = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_disp);
+                        }
+                    }
+                    catch
+                    {
+                        // Fallback: convert original mat
+                        try { bmp = OpenCvSharp.Extensions.BitmapConverter.ToBitmap(img_dmk3); } catch { bmp = null; }
+                    }
                     try
                     {
                         if (this.IsHandleCreated)
@@ -2146,6 +2228,63 @@ namespace AFPv2
                 PgGainAuto(nodeMap_iel, false);
                 PgSetGain(nodeMap_iel, appSettings.Gain);
             }
+        }
+
+        private void numericUpDownExposureManual_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                double val = (double)numericUpDownExposureManual.Value; // ms
+                appSettings.Exposure = val;
+                // if exposure auto is off, apply immediately
+                if (!checkBox_ExposureAuto.Checked)
+                {
+                    PgSetExposure(nodeMap_iel, appSettings.Exposure * 1000); // ms -> us
+                }
+            }
+            catch { }
+        }
+
+        private void numericUpDownGain_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                double val = (double)numericUpDownGain.Value; // dB or unit used by camera
+                appSettings.Gain = val;
+                if (!checkBox_GainAuto.Checked)
+                {
+                    PgSetGain(nodeMap_iel, appSettings.Gain);
+                }
+            }
+            catch { }
+        }
+
+        private void numericUpDownFramerate_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                double val = (double)numericUpDownFramerate.Value; // fps
+                appSettings.Framerate = val;
+                reqFramerate = val;
+                // apply to PointGrey camera if used
+                if (cam_maker == Camera_Maker.PointGreyCamera && nodeMap_iel != null)
+                {
+                    try
+                    {
+                        IFloat iRate = nodeMap_iel.GetNode<IFloat>("AcquisitionFrameRate");
+                        if (iRate != null && iRate.IsWritable)
+                        {
+                            double setval = val;
+                            if (iRate.Max < setval) setval = iRate.Max;
+                            if (iRate.Min > setval) setval = iRate.Min;
+                            iRate.Value = setval;
+                        }
+                    }
+                    catch { }
+                }
+                // other camera types may read appSettings.Framerate elsewhere
+            }
+            catch { }
         }
 
         private void numericUpDownTiltX_ValueChanged_1(object sender, EventArgs e)
