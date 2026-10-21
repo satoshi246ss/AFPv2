@@ -30,7 +30,7 @@ namespace MeteorDetection
         }
 
         /// <returns>更新後の背景 (CV_32F)</returns>
-        public Mat Update(Mat frame8u)
+        public Mat Update(Mat frame8u, Mat mask8u)
         {
             if (_bgF32 == null || _bgF32.Size() != frame8u.Size())
             {
@@ -40,7 +40,7 @@ namespace MeteorDetection
             }
             else
             {
-                Cv2.AccumulateWeighted(frame8u, _bgF32, _alpha);
+                Cv2.AccumulateWeighted(frame8u, _bgF32, _alpha, mask8u);
             }
             return _bgF32;
         }
@@ -58,10 +58,10 @@ namespace MeteorDetection
         public int BinFactor { get; set; } = 2;
 
         /// <summary>動的しきい値 = 平均 + ThresholdK * 標準偏差</summary>
-        public double ThresholdK { get; set; } = 6.0;
+        public double ThresholdK { get; set; } = 12.0; //6
 
         /// <summary>動的しきい値の下限（輝度差、8bit階調換算）</summary>
-        public double MinThreshold { get; set; } = 12.0;
+        public double MinThreshold { get; set; } = 15.0; //12
 
         /// <summary>最小面積（縮小後座標系, px^2）。ノイズ除去用</summary>
         public int MinAreaPx { get; set; } = 2;
@@ -99,8 +99,8 @@ namespace MeteorDetection
             _bg = new RunningAverageBackground(BackgroundAlpha);
         }
 
-        /// <summary>1フレームを処理して検出リストを返す（フル解像度座標）。</summary>
-        public List<Detection> Process(Mat frameGray8u)
+        /// <summary>1フレームを処理して検出リストを返す（フル解像度座標）。mask8u_s: 処理対象領域を示す8ビットグレースケール画像(縮小解像度画像)</summary>
+        public List<Detection> Process(Mat frameGray8u, Mat mask8u_s)
         {
             int bf = Math.Max(1, BinFactor);
             var size = new Size(Math.Max(1, frameGray8u.Width / bf), Math.Max(1, frameGray8u.Height / bf));
@@ -116,7 +116,9 @@ namespace MeteorDetection
             else
                 frameGray8u.CopyTo(_small);
 
-            var bg32 = _bg.Update(_small);
+            Cv2.BitwiseAnd(mask8u_s, _small, _small); // 処理対象領域以外を0にする
+
+            var bg32 = _bg.Update(_small, mask8u_s);
 
             if (_bgSmall8 == null || _bgSmall8.Size() != size)
             {
@@ -130,7 +132,8 @@ namespace MeteorDetection
                 _diff?.Dispose();
                 _diff = new Mat();
             }
-            Cv2.Absdiff(_small, _bgSmall8, _diff);
+            //Cv2.Absdiff(_small, _bgSmall8, _diff);
+            Cv2.Subtract(_small, _bgSmall8, _diff, mask8u_s);      
 
             Cv2.MeanStdDev(_diff, out Scalar mean, out Scalar std);
             double thresh = Math.Max(MinThreshold, mean.Val0 + ThresholdK * std.Val0);

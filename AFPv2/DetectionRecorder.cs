@@ -72,9 +72,18 @@ namespace MeteorDetection
 
         private static Rect ClampRect(Rect r, int w, int h)
         {
-            int x0 = Math.Max(0, r.X), y0 = Math.Max(0, r.Y);
-            int x1 = Math.Min(w, r.X + r.Width), y1 = Math.Min(h, r.Y + r.Height);
-            return new Rect(x0, y0, Math.Max(1, x1 - x0), Math.Max(1, y1 - y0));
+            // Ensure top-left is within [0, w-1]/[0, h-1]
+            int x0 = Math.Max(0, Math.Min(r.X, Math.Max(0, w - 1)));
+            int y0 = Math.Max(0, Math.Min(r.Y, Math.Max(0, h - 1)));
+            // Ensure bottom-right is within [0, w]/[0, h]
+            int x1 = Math.Max(0, Math.Min(w, r.X + r.Width));
+            int y1 = Math.Max(0, Math.Min(h, r.Y + r.Height));
+
+            // Fix degenerate or inverted rectangles
+            if (x1 <= x0) x1 = Math.Min(w, x0 + 1);
+            if (y1 <= y0) y1 = Math.Min(h, y0 + 1);
+
+            return new Rect(x0, y0, x1 - x0, y1 - y0);
         }
 
         public void Dispose()

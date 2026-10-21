@@ -243,6 +243,7 @@ namespace AFPv2
                                 sw.Stop();
                                 //imgdata_static.img.SaveImage("mats0.jpg");
                                 Interlocked.Increment(ref imgdata_static_flag);
+                                Interlocked.Increment(ref imgdata_static_flag2);
                                 Interlocked.Increment(ref frame_id);
                                 Interlocked.Exchange(ref pgr_frame_id,GetChunkData_frameID(image));
                                 Interlocked.Exchange(ref pgr_timestamp, GetChunkData_timestamp(image));
@@ -750,18 +751,19 @@ namespace AFPv2
                                 ival = nodeMap_str.GetNode<IInteger>("StreamDeliveredFrameCount");
                                 if (ival == null || !ival.IsReadable)
                                 {
-                                    string s = "Unable to read 'StreamFailedBufferCount' (node retrieval).\n";
+                                    string s = "Unable to read 'StreamDeliveredFrameCount' (node retrieval).\n";
                                     logger.Error(s);
                                     Console.WriteLine(s);
                                 }
                                 else
                                     pgr_image_frame_count = ival.Value;
 
-                                nodeMap_str = cam_iel.GetTLStreamNodeMap();
-                                ival = nodeMap_str.GetNode<IInteger>("StreamFailedBufferCount");
+                                ival = nodeMap_iel.GetNode<IInteger>("TransmitFailureCount");
+                                //nodeMap_str = cam_iel.GetTLStreamNodeMap();
+                                //ival = nodeMap_str.GetNode<IInteger>("TransmitFailureCount");//StreamFailedBufferCount;Grasshopper3 GS3-U3-123S6M ではない。
                                 if (ival == null || !ival.IsReadable)
                                 {
-                                    string s = "Unable to read 'StreamFailedBufferCount' (node retrieval).\n";
+                                    string s = "Unable to read 'TransmitFailureCount' (node retrieval).\n";
                                     logger.Error(s);
                                     Console.WriteLine(s);
                                 }

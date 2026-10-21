@@ -9,10 +9,10 @@ namespace MeteorDetection
     public sealed class TrackManagerConfig
     {
         /// <summary>対応付けを許容する最大距離（予測位置からの半径）[px]</summary>
-        public double GateRadiusPx = 60;
+        public double GateRadiusPx = 30;//AI:60　599px/s→20px/frame(30fps) 
 
         /// <summary>暫定トラックを「流星候補」として確定するために必要な連続検出数</summary>
-        public int MinHitsToConfirm = 3;
+        public int MinHitsToConfirm = 6;//AI:3
 
         /// <summary>未確定トラックを破棄するまでに許容する連続未検出回数</summary>
         public int MaxMissesTentative = 2;
@@ -21,7 +21,7 @@ namespace MeteorDetection
         public int MaxMissesConfirmed = 4;
 
         /// <summary>この速度[px/s]を超える対応付けは誤対応とみなし許容しない</summary>
-        public double MaxSpeedPxPerSec = 4000;
+        public double MaxSpeedPxPerSec = 1000; //H=100km v=72km/s 角速度=72/100*180/pi=41.3deg/s 2608px/180deg=14.5px/deg 41.3*14.5=599px/s　→ 余裕を見て1000px/sまで許容(AI:4000)
 
         /// <summary>この速度[px/s]未満は静止光源・瞬きなどとみなし確定させない</summary>
         public double MinSpeedPxPerSec = 20;

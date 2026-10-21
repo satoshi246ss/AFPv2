@@ -160,7 +160,8 @@ namespace AFPv2
         public ImageData imgdata = new ImageData(640,480); //struck 初期化ダミー
         CircularBuffer fifo = new CircularBuffer();
         public static ImageData imgdata_static = new ImageData(640, 480); //struck 初期化ダミー
-        public static int imgdata_static_flag =0; // 0:新規データなし。　1以上：新規データ数
+        public static int imgdata_static_flag = 0; // 0:新規データなし。　1以上：新規データ数
+        public static int imgdata_static_flag2 = 0; // 0:新規データなし。　1以上：新規データ数
         public static int pgc_cam_stop_flag = 0; // 0:そのまま　1:撮像停止
 
         double set_exposure  = 3;   // [ms]            F1.8:F4  exp 8ms:3ms  gain 1024: 100  約106倍
@@ -227,6 +228,7 @@ namespace AFPv2
         [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
         public static extern uint timeEndPeriod(uint uMilliseconds);
         uint time_period = 1;
+
 
         #endregion
 

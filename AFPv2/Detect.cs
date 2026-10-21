@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Windows.Forms;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
+using MeteorDetection;
 
 namespace AFPv2
 {
@@ -15,7 +16,13 @@ namespace AFPv2
         /// 最大値サーチ
         /// </summary>
         public void detect()
-        {
+        {            
+            //UsageExample.Grab(imgdata.img, UsageExample.queue, UsageExample.cts.Token);
+            //UsageExample.Process(UsageExample.pipeline, UsageExample.queue, img_mask8u_s, UsageExample.cts.Token);
+            UsageExample.pipeline.ProcessFrame(imgdata.img, img_mask8u_s, DateTime.UtcNow);
+
+            return;
+
             if (appSettings.CamPlatform == Platform.MT2)
             {
                 theta_c = -udpkv.cal_mt2_theta(appSettings.Flipmode, appSettings.FlipOn) - appSettings.Theta;

@@ -1,8 +1,10 @@
 ﻿//using PylonC.NETSupportLibrary;
 //using MtLibrary;
+using MeteorDetection;
 using MtLibrary2;
 using OpenCvSharp;
 using OpenCvSharp.XFeatures2D;
+using SpinnakerNET.GenApi;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,7 +24,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using SpinnakerNET.GenApi;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace AFPv2                                                                                                                                                                                                                                                                                                 
@@ -37,6 +38,14 @@ namespace AFPv2
         // オーバーレイ表示用ビットマップとロック
         private Bitmap overlayBitmap = null;
         private readonly object overlayLock = new object();
+        // 動画検出用の共有 detector（UI で制御）
+        private MeteorDetection.MeteorFrameDetector videoDetector;
+        private volatile bool showMaskOverlay;
+        private volatile bool useStarMask;
+        private readonly Dictionary<string, NumericUpDown> cloudMaskControls = new Dictionary<string, NumericUpDown>();
+        private Panel cloudMaskPanel;
+        // デザイナーで追加したビデオ検出ボタンのフィールド（Designer にも同様の初期化がある）
+        private System.Windows.Forms.Button buttonDetectFromVideo;
         // グリッド表示用チェックボックス（ランタイム生成）
         //private System.Windows.Forms.CheckBox checkBoxGrid = null;
         // loupe用の診断ログを間引くためのタイムスタンプ
@@ -69,10 +78,8 @@ namespace AFPv2
             {
                 //アプリケーションを終了する
                 Application.Exit();
-            } 
-
-
-
+            }
+        
             if (cmds[1].StartsWith("/vi") || cmds[1].StartsWith("/an"))  // analog camera VideoInputを使用
             {
                 cam_maker = Camera_Maker.analog;
@@ -113,6 +120,37 @@ namespace AFPv2
             // initialize loupe controls defaults (handled elsewhere)
 
             IplImageInit();
+
+            // 動画検出用のデフォルト detector を作成し、UI に反映・イベント登録
+            try
+            {
+                videoDetector = new MeteorDetection.MeteorFrameDetector();
+                videoDetector.CloudMaskConfig = new MeteorDetection.CloudMaskConfig();
+                videoDetector.StarMaskConfig = new MeteorDetection.StarMaskConfig();
+                if (this.checkBoxShowMaskOverlay != null)
+                {
+                    this.checkBoxShowMaskOverlay.CheckedChanged += (s, e) => showMaskOverlay = this.checkBoxShowMaskOverlay.Checked;
+                    showMaskOverlay = this.checkBoxShowMaskOverlay.Checked;
+                }
+                if (this.checkBoxUseStarMask != null)
+                {
+                    this.checkBoxUseStarMask.CheckedChanged += (s, e) =>
+                    {
+                        useStarMask = this.checkBoxUseStarMask.Checked;
+                        if (videoDetector != null)
+                            videoDetector.StarMaskConfig = useStarMask ? new MeteorDetection.StarMaskConfig() : null;
+                    };
+                    useStarMask = this.checkBoxUseStarMask.Checked;
+                    videoDetector.StarMaskConfig = useStarMask ? new MeteorDetection.StarMaskConfig() : null;
+                }
+                if (this.numericUpDownDetBin != null) this.numericUpDownDetBin.Value = videoDetector.BinFactor;
+                if (this.numericUpDownDetThreshK != null) this.numericUpDownDetThreshK.Value = (decimal)videoDetector.ThresholdK;
+                if (this.numericUpDownDetMinTh != null) this.numericUpDownDetMinTh.Value = (decimal)videoDetector.MinThreshold;
+                if (this.numericUpDownDetMinArea != null) this.numericUpDownDetMinArea.Value = videoDetector.MinAreaPx;
+                if (this.numericUpDownDetDilate != null) this.numericUpDownDetDilate.Value = videoDetector.DilateSize;
+                InitializeCloudMaskControls();
+            }
+            catch { }
 
             // Brightness/Contrast controls are managed by the Designer now.
             // Wire up event handlers and initial sync between TrackBar and NumericUpDown
@@ -252,7 +290,14 @@ namespace AFPv2
                 }
             }
             catch { }
+
+            string trackerCamHost = @"192.168.1.221";
+            int cameraport = 22222;
+            string outbasedir = @"D:\img_data\data\";
+            MeteorDetection.UsageExample.Init(trackerCamHost, cameraport, outbasedir, fish2);
         }
+
+            
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -412,8 +457,8 @@ namespace AFPv2
                             if (!System.IO.Directory.Exists(savedir))
                             {
                                 System.IO.Directory.CreateDirectory(savedir);
-                            }                        
-                            string bg_fn = savedir + DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}_bg", appSettings.NoCapDev) ;                            
+                            }
+                            string bg_fn = savedir + DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + string.Format("_{00}_bg", appSettings.NoCapDev);
                             SaveAvgImage(bg_fn);
                         }
                     }
@@ -717,6 +762,34 @@ namespace AFPv2
                     this.worker.CancelAsync();
                 }
             }
+
+            // TrackManager GateRadius UI 初期同期
+            try
+            {
+                if (this.numericUpDownGateRadiusPx != null)
+                {
+                    // 既存の TrackManager インスタンスがあればその値を反映
+                    // フォーム内で TrackManager を保持している場合は field 名を変更してください
+                    // ここでは可能性として video pipeline などと連携するケースに配慮し、
+                    // フィールド名 'trackManager' を探索して適用します。
+                    this.numericUpDownGateRadiusPx.Value = 60; // デフォルト
+                    try
+                    {
+                        // 反映対象のフィールドが存在すれば取得して反映する
+                        var fi = this.GetType().GetField("trackManager", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                        if (fi != null)
+                        {
+                            var tm = fi.GetValue(this) as dynamic;
+                            if (tm != null)
+                            {
+                                try { this.numericUpDownGateRadiusPx.Value = (decimal)tm._cfg.GateRadiusPx; } catch { }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         private void ObsStart_Click(object sender, EventArgs e)
@@ -880,6 +953,209 @@ namespace AFPv2
             catch { }
         }
 
+        // ボタンハンドラ: 観測動画(.avi)を選択し MeteorDetectionPipeline で処理、半分サイズで表示し検出結果をオーバーレイします。
+        private async void buttonDetectFromVideo_Click(object sender, EventArgs e)
+        {
+            using (var ofd = new OpenFileDialog { Filter = "AVI files|*.avi|All files|*.*" })
+            {
+                if (ofd.ShowDialog() != DialogResult.OK) return;
+                string path = ofd.FileName;
+                await Task.Run(() => ProcessVideoWithPipeline(path));
+            }
+        }
+
+        // 動画を開いてフレームごとにパイプラインへ送り、1/2サイズで表示し検出矩形/中心を描画する
+        private void ProcessVideoWithPipeline(string path)
+        {
+            var detector = this.videoDetector ?? (this.videoDetector = new MeteorDetection.MeteorFrameDetector());
+
+            // 雲・月マスクを有効化する。
+            // null の場合は MeteorFrameDetector 側で雲マスク処理が無効になるため、
+            // 動画検出時は既定値の CloudMaskConfig を明示的に設定する。
+            if (detector.CloudMaskConfig == null)
+            {
+                detector.CloudMaskConfig = new MeteorDetection.CloudMaskConfig();
+            }
+            detector.CloudMaskUpdateIntervalFrames = Math.Max(1, detector.CloudMaskUpdateIntervalFrames);
+
+            var tracker = new TrackManager();
+            
+            DetectionRecorder recorder = null;
+            try
+            {
+                string tmpDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "detecttmp");
+                System.IO.Directory.CreateDirectory(tmpDir);
+                recorder = new DetectionRecorder(tmpDir);
+            }
+            catch { recorder = null; }
+
+            using (var pipeline = new MeteorDetectionPipeline(detector, tracker, recorder, null, this.fish2))
+            using (var cap = new VideoCapture(path))
+            {
+                if (!cap.IsOpened())
+                {
+                    try { this.BeginInvoke(new Action(() => MessageBox.Show($"Cannot open file: {path}"))); } catch { }
+                    return;
+                }
+
+                Mat frame = new Mat();
+                int videoFrameIndex = 0;
+                while (cap.Read(frame) && !frame.Empty())
+                {
+                    // グレースケールに変換して検出
+                    using (var gray = new Mat())
+                    {
+                        Cv2.CvtColor(frame, gray, ColorConversionCodes.BGR2GRAY);
+
+                        // マスクを縮小して検出に適用（detector.BinFactor に合わせる）
+                        Mat maskSmall = null;
+                        int bf = Math.Max(1, detector.BinFactor);
+                        var smallSize = new OpenCvSharp.Size(Math.Max(1, frame.Width / bf), Math.Max(1, frame.Height / bf));
+                        if (this.img_mask != null)
+                        {
+                            maskSmall = new Mat();
+                            Cv2.Resize(this.img_mask, maskSmall, smallSize, 0, 0, InterpolationFlags.Nearest);
+                            if (maskSmall.Type() != MatType.CV_8U)
+                            {
+                                var tmp = new Mat();
+                                Cv2.CvtColor(maskSmall, tmp, ColorConversionCodes.BGR2GRAY);
+                                maskSmall.Dispose();
+                                maskSmall = tmp;
+                            }
+                        }
+
+                        // パイプライン処理（内部で Detector->Tracker->Recorder/UDP を行う）
+                        pipeline.ProcessFrame(gray, maskSmall, DateTime.UtcNow);
+
+                        // 同じ検出を取得して表示用に使う（オフライン処理なので重複しても可）
+                        var detections = detector.Process(gray, maskSmall);
+
+                        // 表示用に1/2サイズへ縮小
+                        int w2 = Math.Max(1, frame.Width / 2);
+                        int h2 = Math.Max(1, frame.Height / 2);
+                        using (var disp = new Mat())
+                        {
+                            Cv2.Resize(frame, disp, new OpenCvSharp.Size(w2, h2), 0, 0, InterpolationFlags.Area);
+
+                            // 統合マスクの除外領域（固定・星・雲）を半透明の薄赤色で重ねる。
+                            if (showMaskOverlay)
+                            {
+                                using (var validMask = detector.GetCombinedValidMask())
+                                using (var maskFull = new Mat())
+                                using (var maskDisplay = new Mat())
+                                using (var redOverlay = new Mat(disp.Size(), disp.Type(), new Scalar(0, 0, 255)))
+                                {
+                                    if (validMask != null)
+                                    {
+                                        Cv2.BitwiseNot(validMask, maskFull);
+                                        Cv2.Resize(maskFull, maskDisplay, disp.Size(), 0, 0, InterpolationFlags.Nearest);
+                                        using (var tinted = new Mat())
+                                        {
+                                            Cv2.BitwiseAnd(redOverlay, redOverlay, tinted, maskDisplay);
+                                            Cv2.AddWeighted(disp, 0.72, tinted, 0.28, 0, disp);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 検出結果をオーバーレイ描画（座標は1/2にスケール）
+                            foreach (var d in detections)
+                            {
+                                var cx = (int)(d.Center.X * 0.5);
+                                var cy = (int)(d.Center.Y * 0.5);
+                                var rx = (int)(d.BBox.X * 0.5);
+                                var ry = (int)(d.BBox.Y * 0.5);
+                                var rw = Math.Max(1, (int)(d.BBox.Width * 0.5));
+                                var rh = Math.Max(1, (int)(d.BBox.Height * 0.5));
+
+                                //Cv2.Rectangle(disp, new OpenCvSharp.Rect(rx, ry, rw, rh), new Scalar(0, 255, 0), 2);
+                                // 中心点は塗りつぶしなしの赤い円（輪郭のみ）
+                                Cv2.Circle(disp, new OpenCvSharp.Point(cx, cy), 4, new Scalar(0, 0, 255), 1);
+                                Cv2.PutText(disp, d.PeakValue.ToString("F0"), new OpenCvSharp.Point(cx + 6, cy - 6), HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 0), 1);
+                            }
+
+                            // トラッカー結果を描画（履歴ポリライン、推定位置円、ID、速度矢印）
+                            try
+                            {
+                                var tracks = pipeline.Tracker.ActiveTracks;
+                                if (tracks != null)
+                                {
+                                    foreach (var tr in tracks)
+                                    {
+                                    // 推定位置と速度を取得
+                                        var pos = tr.Position;
+                                        var vel = tr.VelocityPxPerSec;
+
+                                        // スケール（表示は1/2サイズ）
+                                        int tx = (int)(pos.X * 0.5);
+                                        int ty = (int)(pos.Y * 0.5);
+
+                                        // 履歴を線で描画
+                                        if (tr.History != null && tr.History.Count >= 2)
+                                        {
+                                            var pts = new System.Collections.Generic.List<OpenCvSharp.Point>();
+                                            foreach (var h in tr.History)
+                                            {
+                                                // History の要素は (DateTime T, OpenCvSharp.Point2f Pos) の値タプルなので null チェック不要
+                                                pts.Add(new OpenCvSharp.Point((int)(h.Pos.X * 0.5), (int)(h.Pos.Y * 0.5)));
+                                            }
+                                            if (pts.Count >= 2) Cv2.Polylines(disp, new[] { pts.ToArray() }, false, new Scalar(255, 200, 0), 2);
+                                        }
+
+                                        // 推定位置の円（確定済みは緑、暫定は青）
+                                        var col = (tr.Confirmed) ? new Scalar(0, 255, 0) : new Scalar(255, 0, 0);
+                                        Cv2.Circle(disp, new OpenCvSharp.Point(tx, ty), 5, col, 2);
+
+                                        // ID を表示
+                                        Cv2.PutText(disp, $"ID:{tr.Id}", new OpenCvSharp.Point(tx + 6, ty + 6), HersheyFonts.HersheySimplex, 0.5, col, 1);
+
+                                        // 速度ベクトルを描画（短い矢印）
+                                        double vx = vel.X * 0.5 * 0.1; // 画面スケールと表示縮尺の調整
+                                        double vy = vel.Y * 0.5 * 0.1;
+                                        var endp = new OpenCvSharp.Point((int)(tx + vx), (int)(ty + vy));
+                                        Cv2.ArrowedLine(disp, new OpenCvSharp.Point(tx, ty), endp, col, 2);
+                                    }
+                                }
+                            }
+                            catch { }
+
+                            // 画面内にフレーム番号と検出数を表示
+                            string txtFrame = $"Frame: {videoFrameIndex}";
+                            string txtDet = $"Detections: {detections?.Count ?? 0}";
+                            var pt1 = new OpenCvSharp.Point(10, 24);
+                            var pt2 = new OpenCvSharp.Point(10, 52);
+                            // 検出パラメータ表示
+                            string txtParams = $"Bin:{detector.BinFactor} K:{detector.ThresholdK:F2} MinTh:{detector.MinThreshold:F0} MinA:{detector.MinAreaPx} Dil:{detector.DilateSize}";
+                            var pt3 = new OpenCvSharp.Point(10, 80);
+                            // 黒で下書き（アウトライン）
+                            Cv2.PutText(disp, txtFrame, pt1, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
+                            Cv2.PutText(disp, txtDet, pt2, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
+                            Cv2.PutText(disp, txtParams, pt3, HersheyFonts.HersheySimplex, 0.6, new Scalar(0, 0, 0), 3);
+                            // 白で前景文字
+                            Cv2.PutText(disp, txtFrame, pt1, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
+                            Cv2.PutText(disp, txtDet, pt2, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
+                            Cv2.PutText(disp, txtParams, pt3, HersheyFonts.HersheySimplex, 0.6, new Scalar(255, 255, 255), 1);
+
+                            Cv2.ImShow("MeteorDetection - Video", disp);
+                            Cv2.WaitKey(1000);
+                        }
+                        // maskSmall を解放
+                        try { maskSmall?.Dispose(); } catch { }
+                    }
+
+                    int key = Cv2.WaitKey(1);
+                    if (key == 27) break; // ESC で中止
+                    videoFrameIndex++;
+                }
+
+                try { Cv2.DestroyWindow("MeteorDetection - Video"); } catch { }
+            }
+
+            try { recorder?.Dispose(); } catch { }
+        }
+
+
+
         private void numericUpDownLoupeSize_ValueChanged(object sender, EventArgs e)
         {
             try
@@ -887,6 +1163,133 @@ namespace AFPv2
                 int v = (int)numericUpDownLoupeSize.Value;
                 pictureBoxLoupe.Width = Math.Max(50, Math.Min(600, v));
                 pictureBoxLoupe.Height = Math.Max(50, Math.Min(600, v));
+            }
+            catch { }
+        }
+
+        private void InitializeCloudMaskControls()
+        {
+            if (cloudMaskPanel != null || videoDetector == null) return;
+
+            cloudMaskPanel = new Panel
+            {
+                Name = "cloudMaskPanel",
+                Location = new System.Drawing.Point(260, 890),
+                Size = new System.Drawing.Size(355, 235),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            Controls.Add(cloudMaskPanel);
+            cloudMaskPanel.BringToFront();
+
+            AddCloudMaskControl("Opening", "OpeningSizePx", 0, 99, 15, 0);
+            AddCloudMaskControl("ThresholdK", "ThresholdK", 0, 50, 3, 1);
+            AddCloudMaskControl("MinThreshold", "MinThreshold", 0, 255, 10, 2);
+            AddCloudMaskControl("Closing", "ClosingSizePx", 0, 99, 25, 3);
+            AddCloudMaskControl("Margin", "MarginPx", 0, 99, 15, 4);
+            AddCloudMaskControl("MinCloudArea", "MinCloudAreaPx", 0, 1000000, 50, 5);
+            AddCloudMaskControl("UpdateInterval", "UpdateIntervalFrames", 1, 10000, 15, 6);
+        }
+
+        private void AddCloudMaskControl(string caption, string key, decimal min, decimal max, decimal value, int row)
+        {
+            var label = new Label
+            {
+                Text = caption,
+                Location = new System.Drawing.Point(8, 6 + row * 31),
+                Size = new System.Drawing.Size(145, 23)
+            };
+            var numeric = new NumericUpDown
+            {
+                Name = "numericCloudMask" + key,
+                Location = new System.Drawing.Point(160, 4 + row * 31),
+                Size = new System.Drawing.Size(100, 25),
+                Minimum = min,
+                Maximum = max,
+                DecimalPlaces = key == "ThresholdK" || key == "MinThreshold" ? 1 : 0,
+                Increment = key == "ThresholdK" || key == "MinThreshold" ? 0.5m : 1m,
+                Value = value
+            };
+            numeric.ValueChanged += CloudMaskParameter_ValueChanged;
+            cloudMaskControls[key] = numeric;
+            cloudMaskPanel.Controls.Add(label);
+            cloudMaskPanel.Controls.Add(numeric);
+        }
+
+        private void CloudMaskParameter_ValueChanged(object sender, EventArgs e)
+        {
+            var n = sender as NumericUpDown;
+            if (videoDetector == null || n == null || videoDetector.CloudMaskConfig == null) return;
+
+            var cfg = videoDetector.CloudMaskConfig;
+            string key = n.Name.Replace("numericCloudMask", string.Empty);
+            double value = (double)n.Value;
+            if (key == "OpeningSizePx") cfg.OpeningSizePx = (int)value;
+            else if (key == "ThresholdK") cfg.ThresholdK = value;
+            else if (key == "MinThreshold") cfg.MinThreshold = value;
+            else if (key == "ClosingSizePx") cfg.ClosingSizePx = (int)value;
+            else if (key == "MarginPx") cfg.MarginPx = (int)value;
+            else if (key == "MinCloudAreaPx") cfg.MinCloudAreaPx = (int)value;
+            else if (key == "UpdateIntervalFrames") videoDetector.CloudMaskUpdateIntervalFrames = (int)value;
+        }
+
+        // Detector UI イベントハンドラ
+        private void numericUpDownDetBin_ValueChanged(object sender, EventArgs e)
+        {
+            try { if (videoDetector != null) videoDetector.BinFactor = (int)numericUpDownDetBin.Value; } catch { }
+        }
+
+        private void numericUpDownDetThreshK_ValueChanged(object sender, EventArgs e)
+        {
+            try { if (videoDetector != null) videoDetector.ThresholdK = (double)numericUpDownDetThreshK.Value; } catch { }
+        }
+
+        private void numericUpDownDetMinTh_ValueChanged(object sender, EventArgs e)
+        {
+            try { if (videoDetector != null) videoDetector.MinThreshold = (double)numericUpDownDetMinTh.Value; } catch { }
+        }
+
+        private void numericUpDownDetMinArea_ValueChanged(object sender, EventArgs e)
+        {
+            try { if (videoDetector != null) videoDetector.MinAreaPx = (int)numericUpDownDetMinArea.Value; } catch { }
+        }
+
+        private void numericUpDownDetDilate_ValueChanged(object sender, EventArgs e)
+        {
+            try { if (videoDetector != null) videoDetector.DilateSize = (int)numericUpDownDetDilate.Value; } catch { }
+        }
+
+        // TrackManager GateRadiusPx を UI から即時変更するハンドラ
+        private void numericUpDownGateRadiusPx_ValueChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (numericUpDownGateRadiusPx == null) return;
+                double v = (double)numericUpDownGateRadiusPx.Value;
+
+                // フォームが保持する TrackManager インスタンスを探索して即時反映する
+                var fi = this.GetType().GetField("trackManager", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                if (fi != null)
+                {
+                    var tm = fi.GetValue(this);
+                    if (tm != null)
+                    {
+                        // TrackManager は内部で TrackManagerConfig を _cfg フィールドに保持しているため反射で設定
+                        try
+                        {
+                            var cfgFi = tm.GetType().GetField("_cfg", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                            if (cfgFi != null)
+                            {
+                                var cfg = cfgFi.GetValue(tm);
+                                if (cfg != null)
+                                {
+                                    var gateFi = cfg.GetType().GetField("GateRadiusPx", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                                    if (gateFi != null) gateFi.SetValue(cfg, v);
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+                }
             }
             catch { }
         }
@@ -1357,7 +1760,7 @@ namespace AFPv2
                     }
 
                     // file logging removed from display loop
-                    label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
+                    //label_mask.Text = star_disp_count.ToString() + "( " + star_visible_num.ToString() + " )";
                 }
 
                 try
@@ -1458,7 +1861,7 @@ namespace AFPv2
 
             sw.Stop();
             long microseconds = sw.ElapsedTicks / (System.Diagnostics.Stopwatch.Frequency / (1000L * 1000L));
-            Console.WriteLine("timer_dispO() : " + frame_id.ToString() + ": (" + sw.ElapsedMilliseconds.ToString() + ")ms " + microseconds);
+            //Console.WriteLine("timer_disp() : " + frame_id.ToString() + ": (" + sw.ElapsedMilliseconds.ToString() + ")ms " + microseconds);
 
 
             string s = null;
@@ -1956,9 +2359,79 @@ namespace AFPv2
 
         private void button_test_Click(object sender, EventArgs e)
         {
-            var fish2 = new AllSkyCamera.FisheyeCameraModel(2608, 2608, 2.7 / 0.00345);
-            double rolldeg = 180.0;// 180.0:  Roll angle in degrees 北が下の画像（現在のFish2の向き）
-            fish2.SetPointingError(0.0, 0.0, rolldeg); // Set pointing error to zero for testing
+            string fn_t = @"D:\img_data\data\20260211_1s_1.png";
+            Mat mat1 = Cv2.ImRead(fn_t, ImreadModes.Grayscale);
+            Cv2.ImShow("mat1:", mat1);
+
+            var starMaskConfig = new StarMaskConfig
+            {
+                /// <summary>恒星検出の動的しきい値 = 背景の平均 + ThresholdK * 標準偏差</summary>
+                ThresholdK = 5.0,
+
+                /// <summary>動的しきい値の下限（8bit階調換算の輝度）</summary>
+                MinThreshold = 15.0,
+
+                /// <summary>恒星とみなす最小面積 [px^2]（背景画像の解像度基準）。ノイズ除去用</summary>
+                MinStarAreaPx = 1,
+
+                /// <summary>恒星とみなす最大面積 [px^2]。これを超える明部は雲・光害などとして除外対象にしない</summary>
+                MaxStarAreaPx = 60,
+
+                /// <summary>各恒星の中心から除外する半径 [px]（瞬きによる輝度変化・測光中心の揺れ・
+                /// 背景の実効時定数内でのわずかな日周運動ズレを吸収するための余裕）</summary>
+                ExclusionRadiusPx = 4,
+
+                /// <summary>1回のマスク生成で処理する恒星数の上限（処理時間の安全弁。天の川方向などで極端に
+                /// 星数が多い場合に備える）</summary>
+                MaxStars = 3000
+
+            };
+            var cloudMaskConfig = new CloudMaskConfig
+            {
+                /// <summary>恒星除去用オープニング(収縮→膨張)のカーネルサイズ [px]。
+                /// 恒星の見かけの大きさ(PSF)より大きく、想定する最小の雲パッチより小さく設定する。
+                /// 0にするとオープニングを行わない（恒星も含めた全ての明部を雲候補扱いにする）。</summary>
+                OpeningSizePx = 15,
+
+                /// <summary>雲候補抽出の動的しきい値 = (オープニング後画像の)平均 + ThresholdK * 標準偏差</summary>
+                ThresholdK = 3.0,
+
+                /// <summary>動的しきい値の下限（8bit階調換算の輝度）</summary>
+                MinThreshold = 10.0,
+
+                /// <summary>断片化した雲領域を連結するクロージング(膨張→収縮)のカーネルサイズ [px]。
+                /// 0にするとクロージングを行わない。</summary>
+                ClosingSizePx = 25,
+
+                /// <summary>最終マスクに持たせる安全マージン [px]。雲の輪郭や月のハロー(滲み)は
+                /// 2値化の境界より実際には広がっていることが多いため、外側に余裕を持たせて除外する。</summary>
+                MarginPx = 15,
+
+                /// <summary>これ未満の面積 [px^2] の孤立領域は雲とみなさず除外しない（誤判定抑制）。
+                /// オープニング・クロージング後に残る小さなノイズ的領域を想定し、恒星除外に使う
+                /// 面積よりも十分大きい値を設定する。</summary>
+                MinCloudAreaPx = 50
+            };
+
+
+    sw.Reset();sw.Start();
+            var starmask = MeteorDetection.StarMaskGenerator.GenerateValidMask(mat1, starMaskConfig);// 42ms
+            var cloudmask = MeteorDetection.CloudMaskGenerator.GenerateValidMask(mat1, cloudMaskConfig);// 42ms
+            long microseconds = sw.ElapsedTicks / (System.Diagnostics.Stopwatch.Frequency / (1000L * 1000L));
+            label_mask.Text = "starmask: " + microseconds.ToString() + "[usec]";
+
+            Cv2.ImShow("starmask:", starmask);
+            starmask.ImWrite(@"D:\img_data\data\20260211_1s_1_starmask.png");
+
+            Cv2.ImShow("cloudmask:", cloudmask);
+            cloudmask.ImWrite(@"D:\img_data\data\20260211_1s_1_cloudmask.png");
+            Cv2.WaitKey();
+
+            var fish2 = new AllSkyCamera.FisheyeCameraModel(2608, 2608, 2.67 / 0.00345);
+            double rolldeg = 180.0;// 180.0:  Roll angle in degrees 北が下の画像（現在のFish2の向き
+            double tx =  0.8;
+            double ty = -0.2;
+            fish2.SetPointingError(tx, ty, rolldeg); // Set pointing error to zero for testing
             double az  = 266.9747;
             double alt = 38.389666;
 
@@ -1970,10 +2443,22 @@ namespace AFPv2
             Console.WriteLine("az,alt:({0}, {1}) px,py;({2}, {3})", az, alt, px, py);
 
 
-            string videoSourcee = @"D:\img_data\data\20260630_235211_566_1.avi";
+            //string videoSourcee = @"D:\img_data\data\20260630_235211_566_1.avi";
+            string videoSourcee = @"D:\img_data\data\output.mp4";
             string trackerCamHost = @"192.168.1.221";
             int cameraport = 22222;
             string outbasedir = @"D:\img_data\data\";
+
+            //VideoCapture vc = new VideoCapture(videoSourcee);
+            //using (var mat = new Mat())
+            //{
+            //    while (!vc.Read(mat))
+            //    {                    
+            //        Cv2.ImShow("GrabLoop", mat);
+            //        if (Cv2.WaitKey(33) == 27) break; // ESC to exit
+            //    }
+            //}
+
             MeteorDetection.UsageExample.Run(videoSourcee, trackerCamHost, cameraport, outbasedir, fish2);
 
             return;
@@ -2303,6 +2788,11 @@ namespace AFPv2
         }
 
         private void numericUpDownLoupeZoom_VisibleChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void labelDetMinTh_Click(object sender, EventArgs e)
         {
 
         }

@@ -54,6 +54,10 @@ namespace MeteorDetection
         {
             _lastFrame = frameGray8u;
             var detections = Detector.Process(frameGray8u, img_mask8u_s);
+            if (detections.Count > 0)
+            {
+                Console.WriteLine($"[{timestampUtc:HH:mm:ss.fff}] {detections.Count} detections");
+            }
             Tracker.Step(detections, timestampUtc);
         }
 

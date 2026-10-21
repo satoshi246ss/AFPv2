@@ -160,6 +160,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CloudMaskGenerator.cs" />
     <Compile Include="Detect.cs">
       <SubType>Form</SubType>
     </Compile>

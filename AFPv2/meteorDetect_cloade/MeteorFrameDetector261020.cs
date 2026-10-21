@@ -75,9 +75,38 @@ namespace MeteorDetection
         /// <summary>背景更新の指数移動平均係数</summary>
         public double BackgroundAlpha { get; set; } = 0.03;
 
+        /// <summary>
+        /// 星マスクを有効にする場合に設定する（null=無効、既定）。
+        /// 恒星の瞬きによる誤検出を抑制するため、背景画像から検出した恒星周辺を
+        /// 流星検出の対象から除外する。
+        /// </summary>
+        public StarMaskConfig StarMaskConfig { get; set; }
+
+        /// <summary>星マスクの再生成間隔 [フレーム数]。背景（＝恒星位置）はごくゆっくりとしか
+        /// 変化しないため毎フレーム再計算する必要はなく、間引くことでCPU負荷を抑える。</summary>
+        public int StarMaskUpdateIntervalFrames { get; set; } = 30;
+
+        /// <summary>直近に生成した星マスクで検出された恒星数（参考情報、UIログ等に利用可）。</summary>
+        public int LastStarCount { get; private set; }
+
+        /// <summary>
+        /// 雲（月を含む）マスクを有効にする場合に設定する（null=無効、既定）。
+        /// 雲や月による面的な明部を流星検出の対象から除外する。
+        /// </summary>
+        public CloudMaskConfig CloudMaskConfig { get; set; }
+
+        /// <summary>雲マスクの再生成間隔 [フレーム数]。星より動きが速いため、星マスクより
+        /// 短めの間隔を設定することを推奨する。</summary>
+        public int CloudMaskUpdateIntervalFrames { get; set; } = 15;
+
+        /// <summary>直近に生成した雲マスクでの雲・月の画面占有率（0〜1、参考情報）。</summary>
+        public double LastCloudCoverageRatio { get; private set; }
+
         private RunningAverageBackground _bg;
-        private Mat _small, _bgSmall32, _bgSmall8, _diff, _mask, _kernel;
+        private Mat _small, _bgSmall32, _bgSmall8, _diff, _mask, _kernel, _starValidMask, _cloudValidMask;
         private int _kernelSize = -1;
+        private int _frameCounter = -1;
+        private int _cloudFrameCounter = -1;
 
         public MeteorFrameDetector()
         {
@@ -136,6 +165,32 @@ namespace MeteorDetection
                     _kernelSize = DilateSize;
                 }
                 Cv2.Dilate(_mask, _mask, _kernel);
+            }
+
+            if (StarMaskConfig != null)
+            {
+                _frameCounter++;
+                if (_starValidMask == null || _starValidMask.Size() != size ||
+                    _frameCounter % Math.Max(1, StarMaskUpdateIntervalFrames) == 0)
+                {
+                    _starValidMask?.Dispose();
+                    _starValidMask = StarMaskGenerator.GenerateValidMask(_bgSmall8, StarMaskConfig,
+                        count => LastStarCount = count);
+                }
+                Cv2.BitwiseAnd(_mask, _starValidMask, _mask);
+            }
+
+            if (CloudMaskConfig != null)
+            {
+                _cloudFrameCounter++;
+                if (_cloudValidMask == null || _cloudValidMask.Size() != size ||
+                    _cloudFrameCounter % Math.Max(1, CloudMaskUpdateIntervalFrames) == 0)
+                {
+                    _cloudValidMask?.Dispose();
+                    _cloudValidMask = CloudMaskGenerator.GenerateValidMask(_bgSmall8, CloudMaskConfig,
+                        ratio => LastCloudCoverageRatio = ratio);
+                }
+                Cv2.BitwiseAnd(_mask, _cloudValidMask, _mask);
             }
 
             var results = new List<Detection>();

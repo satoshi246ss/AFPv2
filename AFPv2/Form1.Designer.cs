@@ -71,9 +71,24 @@
             this.button_test = new System.Windows.Forms.Button();
             this.timerObsOnOff = new System.Windows.Forms.Timer(this.components);
             this.buttonUserSetLoad = new System.Windows.Forms.Button();
+            this.buttonDetectFromVideo = new System.Windows.Forms.Button();
             this.checkBoxLoupe = new System.Windows.Forms.CheckBox();
             this.numericUpDownLoupeZoom = new System.Windows.Forms.NumericUpDown();
             this.numericUpDownLoupeSize = new System.Windows.Forms.NumericUpDown();
+            this.labelDetBin = new System.Windows.Forms.Label();
+            this.numericUpDownDetBin = new System.Windows.Forms.NumericUpDown();
+            this.labelDetThreshK = new System.Windows.Forms.Label();
+            this.numericUpDownDetThreshK = new System.Windows.Forms.NumericUpDown();
+            this.labelDetMinTh = new System.Windows.Forms.Label();
+            this.numericUpDownDetMinTh = new System.Windows.Forms.NumericUpDown();
+            this.labelDetMinArea = new System.Windows.Forms.Label();
+            this.numericUpDownDetMinArea = new System.Windows.Forms.NumericUpDown();
+            this.labelDetDilate = new System.Windows.Forms.Label();
+            this.numericUpDownDetDilate = new System.Windows.Forms.NumericUpDown();
+            this.labelGateRadiusPx = new System.Windows.Forms.Label();
+            this.numericUpDownGateRadiusPx = new System.Windows.Forms.NumericUpDown();
+            this.checkBoxShowMaskOverlay = new System.Windows.Forms.CheckBox();
+            this.checkBoxUseStarMask = new System.Windows.Forms.CheckBox();
             this.numericUpDownFramerate = new System.Windows.Forms.NumericUpDown();
             this.labelFramerate = new System.Windows.Forms.Label();
             this.checkBox_ExposureAuto = new System.Windows.Forms.CheckBox();
@@ -106,6 +121,12 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeZoom)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeSize)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetBin)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetThreshK)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetMinTh)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetMinArea)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetDilate)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownGateRadiusPx)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownFramerate)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownExposureManual)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownGain)).BeginInit();
@@ -199,7 +220,7 @@
             // ShowButton
             // 
             this.ShowButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.ShowButton.Location = new System.Drawing.Point(11, 217);
+            this.ShowButton.Location = new System.Drawing.Point(141, 221);
             this.ShowButton.Name = "ShowButton";
             this.ShowButton.Size = new System.Drawing.Size(103, 33);
             this.ShowButton.TabIndex = 4;
@@ -210,7 +231,7 @@
             // CloseButton
             // 
             this.CloseButton.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.CloseButton.Location = new System.Drawing.Point(11, 1008);
+            this.CloseButton.Location = new System.Drawing.Point(12, 221);
             this.CloseButton.Name = "CloseButton";
             this.CloseButton.Size = new System.Drawing.Size(103, 45);
             this.CloseButton.TabIndex = 5;
@@ -494,6 +515,7 @@
             this.numericUpDownTiltY.Name = "numericUpDownTiltY";
             this.numericUpDownTiltY.Size = new System.Drawing.Size(120, 25);
             this.numericUpDownTiltY.TabIndex = 102;
+            this.numericUpDownTiltY.ValueChanged += new System.EventHandler(this.numericUpDownTiltY_ValueChanged);
             // 
             // labelTiltY
             // 
@@ -518,7 +540,7 @@
             // button_test
             // 
             this.button_test.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.button_test.Location = new System.Drawing.Point(13, 920);
+            this.button_test.Location = new System.Drawing.Point(270, 221);
             this.button_test.Name = "button_test";
             this.button_test.Size = new System.Drawing.Size(102, 56);
             this.button_test.TabIndex = 20;
@@ -536,13 +558,24 @@
             // 
             this.buttonUserSetLoad.Font = new System.Drawing.Font("MS UI Gothic", 10F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
             this.buttonUserSetLoad.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.buttonUserSetLoad.Location = new System.Drawing.Point(13, 840);
+            this.buttonUserSetLoad.Location = new System.Drawing.Point(404, 221);
             this.buttonUserSetLoad.Name = "buttonUserSetLoad";
             this.buttonUserSetLoad.Size = new System.Drawing.Size(103, 67);
             this.buttonUserSetLoad.TabIndex = 21;
             this.buttonUserSetLoad.Text = "UserSetLoad";
             this.buttonUserSetLoad.UseVisualStyleBackColor = true;
             this.buttonUserSetLoad.Click += new System.EventHandler(this.buttonUserSetLoad_Click);
+            // 
+            // buttonDetectFromVideo
+            // 
+            this.buttonDetectFromVideo.Font = new System.Drawing.Font("MS UI Gothic", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.buttonDetectFromVideo.Location = new System.Drawing.Point(13, 830);
+            this.buttonDetectFromVideo.Name = "buttonDetectFromVideo";
+            this.buttonDetectFromVideo.Size = new System.Drawing.Size(102, 54);
+            this.buttonDetectFromVideo.TabIndex = 21;
+            this.buttonDetectFromVideo.Text = "Detect AVI";
+            this.buttonDetectFromVideo.UseVisualStyleBackColor = true;
+            this.buttonDetectFromVideo.Click += new System.EventHandler(this.buttonDetectFromVideo_Click);
             // 
             // checkBoxLoupe
             // 
@@ -598,6 +631,187 @@
             0,
             0,
             0});
+            // 
+            // labelDetBin
+            // 
+            this.labelDetBin.Location = new System.Drawing.Point(14, 894);
+            this.labelDetBin.Name = "labelDetBin";
+            this.labelDetBin.Size = new System.Drawing.Size(100, 23);
+            this.labelDetBin.TabIndex = 209;
+            this.labelDetBin.Text = "BinFactor";
+            // 
+            // numericUpDownDetBin
+            // 
+            this.numericUpDownDetBin.Location = new System.Drawing.Point(124, 894);
+            this.numericUpDownDetBin.Maximum = new decimal(new int[] {
+            4,
+            0,
+            0,
+            0});
+            this.numericUpDownDetBin.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDownDetBin.Name = "numericUpDownDetBin";
+            this.numericUpDownDetBin.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownDetBin.TabIndex = 210;
+            this.numericUpDownDetBin.Value = new decimal(new int[] {
+            2,
+            0,
+            0,
+            0});
+            this.numericUpDownDetBin.ValueChanged += new System.EventHandler(this.numericUpDownDetBin_ValueChanged);
+            // 
+            // labelDetThreshK
+            // 
+            this.labelDetThreshK.Location = new System.Drawing.Point(15, 927);
+            this.labelDetThreshK.Name = "labelDetThreshK";
+            this.labelDetThreshK.Size = new System.Drawing.Size(100, 23);
+            this.labelDetThreshK.TabIndex = 211;
+            this.labelDetThreshK.Text = "ThresholdK（小数2桁）";
+            // 
+            // numericUpDownDetThreshK
+            // 
+            this.numericUpDownDetThreshK.DecimalPlaces = 1;
+            this.numericUpDownDetThreshK.Location = new System.Drawing.Point(124, 925);
+            this.numericUpDownDetThreshK.Name = "numericUpDownDetThreshK";
+            this.numericUpDownDetThreshK.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownDetThreshK.TabIndex = 212;
+            this.numericUpDownDetThreshK.Value = new decimal(new int[] {
+            6,
+            0,
+            0,
+            0});
+            this.numericUpDownDetThreshK.ValueChanged += new System.EventHandler(this.numericUpDownDetThreshK_ValueChanged);
+            // 
+            // labelDetMinTh
+            // 
+            this.labelDetMinTh.Location = new System.Drawing.Point(14, 958);
+            this.labelDetMinTh.Name = "labelDetMinTh";
+            this.labelDetMinTh.Size = new System.Drawing.Size(100, 23);
+            this.labelDetMinTh.TabIndex = 213;
+            this.labelDetMinTh.Text = "MinThreshold";
+            this.labelDetMinTh.Click += new System.EventHandler(this.labelDetMinTh_Click);
+            // 
+            // numericUpDownDetMinTh
+            // 
+            this.numericUpDownDetMinTh.DecimalPlaces = 1;
+            this.numericUpDownDetMinTh.Location = new System.Drawing.Point(124, 956);
+            this.numericUpDownDetMinTh.Maximum = new decimal(new int[] {
+            255,
+            0,
+            0,
+            0});
+            this.numericUpDownDetMinTh.Name = "numericUpDownDetMinTh";
+            this.numericUpDownDetMinTh.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownDetMinTh.TabIndex = 214;
+            this.numericUpDownDetMinTh.Value = new decimal(new int[] {
+            12,
+            0,
+            0,
+            0});
+            this.numericUpDownDetMinTh.ValueChanged += new System.EventHandler(this.numericUpDownDetMinTh_ValueChanged);
+            // 
+            // labelDetMinArea
+            // 
+            this.labelDetMinArea.Location = new System.Drawing.Point(15, 989);
+            this.labelDetMinArea.Name = "labelDetMinArea";
+            this.labelDetMinArea.Size = new System.Drawing.Size(100, 23);
+            this.labelDetMinArea.TabIndex = 215;
+            this.labelDetMinArea.Text = "MinAreaPx";
+            // 
+            // numericUpDownDetMinArea
+            // 
+            this.numericUpDownDetMinArea.Location = new System.Drawing.Point(124, 987);
+            this.numericUpDownDetMinArea.Maximum = new decimal(new int[] {
+            1000000,
+            0,
+            0,
+            0});
+            this.numericUpDownDetMinArea.Name = "numericUpDownDetMinArea";
+            this.numericUpDownDetMinArea.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownDetMinArea.TabIndex = 216;
+            this.numericUpDownDetMinArea.Value = new decimal(new int[] {
+            2,
+            0,
+            0,
+            0});
+            this.numericUpDownDetMinArea.ValueChanged += new System.EventHandler(this.numericUpDownDetMinArea_ValueChanged);
+            // 
+            // labelDetDilate
+            // 
+            this.labelDetDilate.Location = new System.Drawing.Point(14, 1020);
+            this.labelDetDilate.Name = "labelDetDilate";
+            this.labelDetDilate.Size = new System.Drawing.Size(100, 23);
+            this.labelDetDilate.TabIndex = 217;
+            this.labelDetDilate.Text = "DilateSize";
+            // 
+            // numericUpDownDetDilate
+            // 
+            this.numericUpDownDetDilate.Location = new System.Drawing.Point(124, 1018);
+            this.numericUpDownDetDilate.Name = "numericUpDownDetDilate";
+            this.numericUpDownDetDilate.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownDetDilate.TabIndex = 218;
+            this.numericUpDownDetDilate.Value = new decimal(new int[] {
+            3,
+            0,
+            0,
+            0});
+            this.numericUpDownDetDilate.ValueChanged += new System.EventHandler(this.numericUpDownDetDilate_ValueChanged);
+            // 
+            // labelGateRadiusPx
+            // 
+            this.labelGateRadiusPx.Location = new System.Drawing.Point(14, 1051);
+            this.labelGateRadiusPx.Name = "labelGateRadiusPx";
+            this.labelGateRadiusPx.Size = new System.Drawing.Size(100, 23);
+            this.labelGateRadiusPx.TabIndex = 219;
+            this.labelGateRadiusPx.Text = "GateRadiusPx";
+            // 
+            // numericUpDownGateRadiusPx
+            // 
+            this.numericUpDownGateRadiusPx.Location = new System.Drawing.Point(124, 1049);
+            this.numericUpDownGateRadiusPx.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.numericUpDownGateRadiusPx.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDownGateRadiusPx.Name = "numericUpDownGateRadiusPx";
+            this.numericUpDownGateRadiusPx.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDownGateRadiusPx.TabIndex = 220;
+            this.numericUpDownGateRadiusPx.Value = new decimal(new int[] {
+            60,
+            0,
+            0,
+            0});
+            this.numericUpDownGateRadiusPx.ValueChanged += new System.EventHandler(this.numericUpDownGateRadiusPx_ValueChanged);
+            // 
+            // checkBoxShowMaskOverlay
+            // 
+            this.checkBoxShowMaskOverlay.AutoSize = true;
+            this.checkBoxShowMaskOverlay.Location = new System.Drawing.Point(264, 862);
+            this.checkBoxShowMaskOverlay.Name = "checkBoxShowMaskOverlay";
+            this.checkBoxShowMaskOverlay.Size = new System.Drawing.Size(196, 22);
+            this.checkBoxShowMaskOverlay.TabIndex = 221;
+            this.checkBoxShowMaskOverlay.Text = "マスク除外領域を表示";
+            this.checkBoxShowMaskOverlay.UseVisualStyleBackColor = true;
+            // 
+            // checkBoxUseStarMask
+            // 
+            this.checkBoxUseStarMask.AutoSize = true;
+            this.checkBoxUseStarMask.Checked = true;
+            this.checkBoxUseStarMask.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkBoxUseStarMask.Location = new System.Drawing.Point(264, 832);
+            this.checkBoxUseStarMask.Name = "checkBoxUseStarMask";
+            this.checkBoxUseStarMask.Size = new System.Drawing.Size(170, 22);
+            this.checkBoxUseStarMask.TabIndex = 222;
+            this.checkBoxUseStarMask.Text = "星マスクを適用";
+            this.checkBoxUseStarMask.UseVisualStyleBackColor = true;
             // 
             // numericUpDownFramerate
             // 
@@ -767,6 +981,7 @@
             0,
             0,
             65536});
+            this.numericFocalLength.ValueChanged += new System.EventHandler(this.numericFocalLength_ValueChanged);
             // 
             // labelFocalLength
             // 
@@ -849,6 +1064,7 @@
             this.Controls.Add(this.checkBox_ExposureAuto);
             this.Controls.Add(this.buttonUserSetLoad);
             this.Controls.Add(this.button_test);
+            this.Controls.Add(this.buttonDetectFromVideo);
             this.Controls.Add(this.button_mask);
             this.Controls.Add(this.numericUpDownStarCount);
             this.Controls.Add(this.checkBox_DispMode);
@@ -865,6 +1081,20 @@
             this.Controls.Add(this.checkBoxLoupe);
             this.Controls.Add(this.numericUpDownLoupeZoom);
             this.Controls.Add(this.numericUpDownLoupeSize);
+            this.Controls.Add(this.labelDetBin);
+            this.Controls.Add(this.numericUpDownDetBin);
+            this.Controls.Add(this.labelDetThreshK);
+            this.Controls.Add(this.numericUpDownDetThreshK);
+            this.Controls.Add(this.labelDetMinTh);
+            this.Controls.Add(this.numericUpDownDetMinTh);
+            this.Controls.Add(this.labelDetMinArea);
+            this.Controls.Add(this.numericUpDownDetMinArea);
+            this.Controls.Add(this.labelDetDilate);
+            this.Controls.Add(this.numericUpDownDetDilate);
+            this.Controls.Add(this.labelGateRadiusPx);
+            this.Controls.Add(this.numericUpDownGateRadiusPx);
+            this.Controls.Add(this.checkBoxShowMaskOverlay);
+            this.Controls.Add(this.checkBoxUseStarMask);
             this.Controls.Add(this.buttonSavePointing);
             this.Controls.Add(this.numericUpDownTiltY);
             this.Controls.Add(this.labelTiltY);
@@ -902,6 +1132,12 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownTiltY)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeZoom)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownLoupeSize)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetBin)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetThreshK)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetMinTh)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetMinArea)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownDetDilate)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDownGateRadiusPx)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownFramerate)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownExposureManual)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownGain)).EndInit();
@@ -958,6 +1194,16 @@
         private System.Windows.Forms.Button button_test;
         private System.Windows.Forms.Timer timerObsOnOff;
         private System.Windows.Forms.Button buttonUserSetLoad;
+        private System.Windows.Forms.Label labelDetBin;
+        private System.Windows.Forms.NumericUpDown numericUpDownDetBin;
+        private System.Windows.Forms.Label labelDetThreshK;
+        private System.Windows.Forms.NumericUpDown numericUpDownDetThreshK;
+        private System.Windows.Forms.Label labelDetMinTh;
+        private System.Windows.Forms.NumericUpDown numericUpDownDetMinTh;
+        private System.Windows.Forms.Label labelDetMinArea;
+        private System.Windows.Forms.NumericUpDown numericUpDownDetMinArea;
+        private System.Windows.Forms.Label labelDetDilate;
+        private System.Windows.Forms.NumericUpDown numericUpDownDetDilate;
         private System.Windows.Forms.Button buttonSaveOverlay;
         private System.Windows.Forms.CheckBox checkBoxLoupe;
         private System.Windows.Forms.NumericUpDown numericUpDownLoupeZoom;
@@ -980,6 +1226,10 @@
         private System.Windows.Forms.TrackBar trackBarBrightness;
         private System.Windows.Forms.NumericUpDown numericUpDownContrast;
         private System.Windows.Forms.NumericUpDown numericUpDownBrightness;
+        private System.Windows.Forms.Label labelGateRadiusPx;
+        private System.Windows.Forms.NumericUpDown numericUpDownGateRadiusPx;
+         private System.Windows.Forms.CheckBox checkBoxShowMaskOverlay;
+         private System.Windows.Forms.CheckBox checkBoxUseStarMask;
         private System.Windows.Forms.Label labelFocalLength;
         private System.Windows.Forms.CheckBox checkBoxGrid;
     }

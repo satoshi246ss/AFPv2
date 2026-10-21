@@ -58,10 +58,10 @@ namespace MeteorDetection
         public int BinFactor { get; set; } = 2;
 
         /// <summary>動的しきい値 = 平均 + ThresholdK * 標準偏差</summary>
-        public double ThresholdK { get; set; } = 6.0;
+        public double ThresholdK { get; set; } = 12.0; //6
 
         /// <summary>動的しきい値の下限（輝度差、8bit階調換算）</summary>
-        public double MinThreshold { get; set; } = 12.0;
+        public double MinThreshold { get; set; } = 15.0; //12
 
         /// <summary>最小面積（縮小後座標系, px^2）。ノイズ除去用</summary>
         public int MinAreaPx { get; set; } = 2;
@@ -89,10 +89,24 @@ namespace MeteorDetection
         /// <summary>直近に生成した星マスクで検出された恒星数（参考情報、UIログ等に利用可）。</summary>
         public int LastStarCount { get; private set; }
 
+        /// <summary>
+        /// 雲（月を含む）マスクを有効にする場合に設定する（null=無効、既定）。
+        /// 雲や月による面的な明部を流星検出の対象から除外する。
+        /// </summary>
+        public CloudMaskConfig CloudMaskConfig { get; set; }
+
+        /// <summary>雲マスクの再生成間隔 [フレーム数]。星より動きが速いため、星マスクより
+        /// 短めの間隔を設定することを推奨する。</summary>
+        public int CloudMaskUpdateIntervalFrames { get; set; } = 15;
+
+        /// <summary>直近に生成した雲マスクでの雲・月の画面占有率（0〜1、参考情報）。</summary>
+        public double LastCloudCoverageRatio { get; private set; }
+
         private RunningAverageBackground _bg;
-        private Mat _small, _bgSmall32, _bgSmall8, _diff, _mask, _kernel, _starValidMask;
+        private Mat _small, _bgSmall32, _bgSmall8, _diff, _mask, _kernel, _starValidMask, _cloudValidMask, _combinedValidMask;
         private int _kernelSize = -1;
         private int _frameCounter = -1;
+        private int _cloudFrameCounter = -1;
 
         public MeteorFrameDetector()
         {
@@ -116,6 +130,8 @@ namespace MeteorDetection
             else
                 frameGray8u.CopyTo(_small);
 
+            Cv2.BitwiseAnd(mask8u_s, _small, _small); // 処理対象領域以外を0にする
+
             var bg32 = _bg.Update(_small, mask8u_s);
 
             if (_bgSmall8 == null || _bgSmall8.Size() != size)
@@ -130,7 +146,8 @@ namespace MeteorDetection
                 _diff?.Dispose();
                 _diff = new Mat();
             }
-            Cv2.Absdiff(_small, _bgSmall8, _diff);
+            //Cv2.Absdiff(_small, _bgSmall8, _diff);
+            Cv2.Subtract(_small, _bgSmall8, _diff, mask8u_s);      
 
             Cv2.MeanStdDev(_diff, out Scalar mean, out Scalar std);
             double thresh = Math.Max(MinThreshold, mean.Val0 + ThresholdK * std.Val0);
@@ -165,6 +182,29 @@ namespace MeteorDetection
                 }
                 Cv2.BitwiseAnd(_mask, _starValidMask, _mask);
             }
+
+            if (CloudMaskConfig != null)
+            {
+                _cloudFrameCounter++;
+                if (_cloudValidMask == null || _cloudValidMask.Size() != size ||
+                    _cloudFrameCounter % Math.Max(1, CloudMaskUpdateIntervalFrames) == 0)
+                {
+                    _cloudValidMask?.Dispose();
+                    _cloudValidMask = CloudMaskGenerator.GenerateValidMask(_bgSmall8, CloudMaskConfig,
+                        ratio => LastCloudCoverageRatio = ratio);
+                }
+                Cv2.BitwiseAnd(_mask, _cloudValidMask, _mask);
+            }
+
+            // 表示用の統合有効マスクを保持する（255=検出対象、0=固定/星/雲で除外）。
+            _combinedValidMask?.Dispose();
+            _combinedValidMask = new Mat(size, MatType.CV_8U, Scalar.All(255));
+            if (mask8u_s != null)
+                Cv2.BitwiseAnd(_combinedValidMask, mask8u_s, _combinedValidMask);
+            if (_starValidMask != null)
+                Cv2.BitwiseAnd(_combinedValidMask, _starValidMask, _combinedValidMask);
+            if (_cloudValidMask != null)
+                Cv2.BitwiseAnd(_combinedValidMask, _cloudValidMask, _combinedValidMask);
 
             var results = new List<Detection>();
 
@@ -205,6 +245,12 @@ namespace MeteorDetection
             }
 
             return results;
+        }
+
+        /// <summary>直近フレームの統合有効マスクを複製して返す。呼び出し側が Dispose する。</summary>
+        public Mat GetCombinedValidMask()
+        {
+            return _combinedValidMask == null ? null : _combinedValidMask.Clone();
         }
     }
 }
