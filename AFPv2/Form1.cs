@@ -986,6 +986,7 @@ namespace AFPv2
                 string tmpDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "detecttmp");
                 System.IO.Directory.CreateDirectory(tmpDir);
                 recorder = new DetectionRecorder(tmpDir);
+                recorder.StartSession(path);
             }
             catch { recorder = null; }
 
@@ -1025,7 +1026,8 @@ namespace AFPv2
                         }
 
                         // パイプライン処理（内部で Detector->Tracker->Recorder/UDP を行う）
-                        pipeline.ProcessFrame(gray, maskSmall, DateTime.UtcNow);
+                        DateTime frameTimestamp = DateTime.UtcNow;
+                        pipeline.ProcessFrame(gray, maskSmall, frameTimestamp);
 
                         // 同じ検出を取得して表示用に使う（オフライン処理なので重複しても可）
                         var detections = detector.Process(gray, maskSmall);
@@ -1122,22 +1124,32 @@ namespace AFPv2
                             // 画面内にフレーム番号と検出数を表示
                             string txtFrame = $"Frame: {videoFrameIndex}";
                             string txtDet = $"Detections: {detections?.Count ?? 0}";
+                            int confirmedTrackCount = 0;
+                            try
+                            {
+                                confirmedTrackCount = pipeline.Tracker.ActiveTracks.Count(t => t.Confirmed);
+                            }
+                            catch { }
+                            string txtConfirmed = $"Confirmed tracks: {confirmedTrackCount}";
                             var pt1 = new OpenCvSharp.Point(10, 24);
                             var pt2 = new OpenCvSharp.Point(10, 52);
+                            var ptConfirmed = new OpenCvSharp.Point(10, 80);
                             // 検出パラメータ表示
                             string txtParams = $"Bin:{detector.BinFactor} K:{detector.ThresholdK:F2} MinTh:{detector.MinThreshold:F0} MinA:{detector.MinAreaPx} Dil:{detector.DilateSize}";
-                            var pt3 = new OpenCvSharp.Point(10, 80);
+                            var pt3 = new OpenCvSharp.Point(10, 108);
                             // 黒で下書き（アウトライン）
                             Cv2.PutText(disp, txtFrame, pt1, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
                             Cv2.PutText(disp, txtDet, pt2, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
+                            Cv2.PutText(disp, txtConfirmed, ptConfirmed, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
                             Cv2.PutText(disp, txtParams, pt3, HersheyFonts.HersheySimplex, 0.6, new Scalar(0, 0, 0), 3);
                             // 白で前景文字
                             Cv2.PutText(disp, txtFrame, pt1, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
                             Cv2.PutText(disp, txtDet, pt2, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
+                            Cv2.PutText(disp, txtConfirmed, ptConfirmed, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
                             Cv2.PutText(disp, txtParams, pt3, HersheyFonts.HersheySimplex, 0.6, new Scalar(255, 255, 255), 1);
 
                             Cv2.ImShow("MeteorDetection - Video", disp);
-                            Cv2.WaitKey(1000);
+                            Cv2.WaitKey(500);
                         }
                         // maskSmall を解放
                         try { maskSmall?.Dispose(); } catch { }
@@ -1175,7 +1187,7 @@ namespace AFPv2
             {
                 Name = "cloudMaskPanel",
                 Location = new System.Drawing.Point(260, 890),
-                Size = new System.Drawing.Size(355, 235),
+                Size = new System.Drawing.Size(355, 205),
                 BorderStyle = BorderStyle.FixedSingle
             };
             Controls.Add(cloudMaskPanel);

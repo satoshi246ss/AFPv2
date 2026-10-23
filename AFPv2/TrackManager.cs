@@ -12,7 +12,10 @@ namespace MeteorDetection
         public double GateRadiusPx = 30;//AI:60　599px/s→20px/frame(30fps) 
 
         /// <summary>暫定トラックを「流星候補」として確定するために必要な連続検出数</summary>
-        public int MinHitsToConfirm = 6;//AI:3
+        public int MinHitsToConfirm = 4;//AI:3
+
+        /// <summary>暫定トラックを「流星候補」として確定するために必要な最大距離（予測位置からの半径）[px]</summary>
+        public double MaxErrRadiusPx = 1.5;//追加　流星は等速直線運動に近似できるため。
 
         /// <summary>未確定トラックを破棄するまでに許容する連続未検出回数</summary>
         public int MaxMissesTentative = 2;
@@ -24,7 +27,7 @@ namespace MeteorDetection
         public double MaxSpeedPxPerSec = 1000; //H=100km v=72km/s 角速度=72/100*180/pi=41.3deg/s 2608px/180deg=14.5px/deg 41.3*14.5=599px/s　→ 余裕を見て1000px/sまで許容(AI:4000)
 
         /// <summary>この速度[px/s]未満は静止光源・瞬きなどとみなし確定させない</summary>
-        public double MinSpeedPxPerSec = 20;
+        public double MinSpeedPxPerSec = 5; //AI:20
     }
 
     /// <summary>
@@ -81,11 +84,13 @@ namespace MeteorDetection
                     var d = unmatched[bestIdx];
                     tr.Update(d.Center, t, d.PeakValue);
                     unmatched.RemoveAt(bestIdx);
+                    Console.WriteLine($"bIdx:{bestIdx} bDist:{bestDist} tr.Hits:{tr.Hits} ");//debug
 
                     if (!tr.Confirmed && tr.Hits >= _cfg.MinHitsToConfirm)
                     {
                         double speed = Length(tr.VelocityPxPerSec);
-                        if (speed >= _cfg.MinSpeedPxPerSec && speed <= _cfg.MaxSpeedPxPerSec)
+                        Console.WriteLine($"speed:{speed} Min:{_cfg.MinSpeedPxPerSec} Max:{_cfg.MaxSpeedPxPerSec} ");//debug
+                        if (speed >= _cfg.MinSpeedPxPerSec && speed <= _cfg.MaxSpeedPxPerSec && bestDist <= _cfg.MaxErrRadiusPx)
                         {
                             tr.Confirm();
                             TrackConfirmed?.Invoke(tr);

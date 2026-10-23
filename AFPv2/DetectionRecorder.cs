@@ -17,6 +17,7 @@ namespace MeteorDetection
         private readonly string _imageDir;
         private readonly string _dataDir;
         private readonly Dictionary<int, StreamWriter> _openLogs = new Dictionary<int, StreamWriter>();
+        private StreamWriter _trackEventLog;
 
         public DetectionRecorder(string baseDir)
         {
@@ -24,6 +25,43 @@ namespace MeteorDetection
             _dataDir = Path.Combine(baseDir, "data");
             Directory.CreateDirectory(_imageDir);
             Directory.CreateDirectory(_dataDir);
+        }
+
+        /// <summary>動画1本分の処理ログを開始する。</summary>
+        public void StartSession(string videoPath)
+        {
+            string stamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
+            _trackEventLog = new StreamWriter(Path.Combine(_dataDir, "track_events_" + stamp + ".csv"), false);
+            _trackEventLog.WriteLine("event,timestamp_utc,track_id,confirmed,hits,misses,first_seen_utc,last_seen_utc,pos_x,pos_y,vel_x_px_s,vel_y_px_s,peak_value,history_count,video_path");
+            _trackEventLog.WriteLine("# video=" + Escape(videoPath));
+        }
+
+        /// <summary>トラックのライフサイクルを記録する。CONFIRMED時は履歴全体も別ログへ詳細出力する。</summary>
+        public void LogTrackEvent(string eventName, MeteorTrack track, DateTime timestampUtc)
+        {
+            if (_trackEventLog == null || track == null) return;
+            var p = track.Position;
+            var v = track.VelocityPxPerSec;
+            _trackEventLog.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                "{0},{1:O},{2},{3},{4},{5},{6:O},{7:O},{8:F3},{9:F3},{10:F3},{11:F3},{12:F3},{13}",
+                eventName, timestampUtc, track.Id, track.Confirmed, track.Hits, track.Misses,
+                track.FirstSeen, track.LastSeen, p.X, p.Y, v.X, v.Y, track.PeakValue, track.History.Count));
+            _trackEventLog.Flush();
+
+            if (eventName == "CONFIRMED")
+            {
+                string path = Path.Combine(_dataDir, string.Format("track{0:D4}_confirmed_detail.csv", track.Id));
+                using (var w = new StreamWriter(path, false))
+                {
+                    w.WriteLine("track_id,history_index,timestamp_utc,pos_x,pos_y");
+                    for (int i = 0; i < track.History.Count; i++)
+                    {
+                        var h = track.History[i];
+                        w.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                            "{0},{1},{2:O},{3:F3},{4:F3}", track.Id, i, h.T, h.Pos.X, h.Pos.Y));
+                    }
+                }
+            }
         }
 
         /// <summary>検知画像を保存する。cropRectを指定すればその範囲のみ切り出して保存する。</summary>
@@ -45,18 +83,18 @@ namespace MeteorDetection
         }
 
         /// <summary>検知情報（時刻・座標・方位高度・輝度）をトラックごとのCSVに追記する。</summary>
-        public void LogDetection(MeteorTrack track, DateTime t, Point2f pixelPos, double azDeg, double altDeg)
+        public void LogDetection(MeteorTrack track, int frameIndex, DateTime t, Point2f pixelPos, double azDeg, double altDeg)
         {
             if (!_openLogs.TryGetValue(track.Id, out StreamWriter w))
             {
                 string path = Path.Combine(_dataDir, $"track{track.Id:D4}.csv");
                 w = new StreamWriter(path, false);
-                w.WriteLine("timestamp_utc,pixel_x,pixel_y,az_deg,alt_deg,peak_value");
+                w.WriteLine("frame_index,timestamp_utc,pixel_x,pixel_y,az_deg,alt_deg,peak_value");
                 _openLogs[track.Id] = w;
             }
             w.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                "{0:O},{1:F2},{2:F2},{3:F3},{4:F3},{5:F1}",
-                t, pixelPos.X, pixelPos.Y, azDeg, altDeg, track.PeakValue));
+                "{0},{1:O},{2:F2},{3:F2},{4:F3},{5:F3},{6:F1}",
+                frameIndex, t, pixelPos.X, pixelPos.Y, azDeg, altDeg, track.PeakValue));
             w.Flush();
         }
 
@@ -90,6 +128,12 @@ namespace MeteorDetection
         {
             foreach (var w in _openLogs.Values) w.Dispose();
             _openLogs.Clear();
+            if (_trackEventLog != null) _trackEventLog.Dispose();
+        }
+
+        private static string Escape(string value)
+        {
+            return (value ?? string.Empty).Replace("\"", "\"\"");
         }
     }
 }

@@ -59,7 +59,10 @@ namespace MeteorDetection
                 Console.WriteLine($"[{timestampUtc:HH:mm:ss.fff}] {detections.Count} detections");
             }
             Tracker.Step(detections, timestampUtc);
+            _frameIndex++;
         }
+
+        private int _frameIndex;
 
         private void Emit(MeteorTrack tr, MeteorUdpMessageType type, bool saveFrame)
         {
@@ -96,7 +99,9 @@ namespace MeteorDetection
 
             if (Recorder != null)
             {
-                Recorder.LogDetection(tr, tr.LastSeen, pos, az, alt);
+                Recorder.LogTrackEvent(type == MeteorUdpMessageType.Start ? "CONFIRMED" :
+                    type == MeteorUdpMessageType.Update ? "UPDATE" : "ENDED", tr, tr.LastSeen);
+                Recorder.LogDetection(tr, _frameIndex, tr.LastSeen, pos, az, alt);
 
                 if (saveFrame && _lastFrame != null)
                 {

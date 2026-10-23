@@ -58,7 +58,7 @@ namespace MeteorDetection
         public int BinFactor { get; set; } = 2;
 
         /// <summary>動的しきい値 = 平均 + ThresholdK * 標準偏差</summary>
-        public double ThresholdK { get; set; } = 12.0; //6
+        public double ThresholdK { get; set; } = 16.0; //6
 
         /// <summary>動的しきい値の下限（輝度差、8bit階調換算）</summary>
         public double MinThreshold { get; set; } = 15.0; //12
