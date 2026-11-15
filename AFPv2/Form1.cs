@@ -65,6 +65,30 @@ namespace AFPv2
     private System.Windows.Forms.Timer loupeTimer = null;
         // Brightness / Contrast UI controls (moved to Designer)
 
+        private void LogConfirmedTrackToUi(MeteorTrack track)
+        {
+            if (track == null || richTextBox1 == null) return;
+
+            if (richTextBox1.InvokeRequired)
+            {
+                richTextBox1.BeginInvoke(new Action<MeteorTrack>(LogConfirmedTrackToUi), track);
+                return;
+            }
+
+            var pos = track.Position;
+            var vel = track.VelocityPxPerSec;
+            double speed = Math.Sqrt(vel.X * vel.X + vel.Y * vel.Y);
+            string line = $"[{DateTime.Now:HH:mm:ss.fff}] Confirmed track id={track.Id}, hits={track.Hits}, speed={speed:F1}px/s, pos=({pos.X:F1},{pos.Y:F1}), first={track.FirstSeen:HH:mm:ss.fff}, last={track.LastSeen:HH:mm:ss.fff}";
+
+            richTextBox1.AppendText(line + Environment.NewLine);
+            richTextBox1.SelectionStart = richTextBox1.TextLength;
+            richTextBox1.ScrollToCaret();
+        }
+
+        private void AttachTrackConfirmationLog()
+        {
+            TrackManager.ConfirmedTrackLogHandler = LogConfirmedTrackToUi;
+        }
 
         public Form1()
         {
@@ -120,6 +144,7 @@ namespace AFPv2
             // initialize loupe controls defaults (handled elsewhere)
 
             IplImageInit();
+            AttachTrackConfirmationLog();
 
             // 動画検出用のデフォルト detector を作成し、UI に反映・イベント登録
             try
@@ -377,6 +402,7 @@ namespace AFPv2
                 //匿名デリゲートで表示する
                 this.Invoke(new dlgSetString(ShowRText), new object[] { richTextBox1, ex.ToString() });
                 logger.Error(ex.ToString());
+                return;
             }
 
             // ベースブロードバンドポートなら転送
@@ -797,6 +823,8 @@ namespace AFPv2
             richTextBox1.AppendText(DateTime.Now.ToString()+ ":Obs. started."+ Environment.NewLine);
             NLogInfo("Obs. started.");
 
+            ProcessFrameWithPipelineInit();
+
             //PGR
             if (cam_maker == Camera_Maker.PointGreyCamera)
             {
@@ -1195,7 +1223,7 @@ namespace AFPv2
 
             AddCloudMaskControl("Opening", "OpeningSizePx", 0, 99, 15, 0);
             AddCloudMaskControl("ThresholdK", "ThresholdK", 0, 50, 3, 1);
-            AddCloudMaskControl("MinThreshold", "MinThreshold", 0, 255, 10, 2);
+            AddCloudMaskControl("MaxBaselineRise", "MaxBaselineRise", 0, 100, 30, 2);
             AddCloudMaskControl("Closing", "ClosingSizePx", 0, 99, 25, 3);
             AddCloudMaskControl("Margin", "MarginPx", 0, 99, 15, 4);
             AddCloudMaskControl("MinCloudArea", "MinCloudAreaPx", 0, 1000000, 50, 5);
@@ -1217,8 +1245,8 @@ namespace AFPv2
                 Size = new System.Drawing.Size(100, 25),
                 Minimum = min,
                 Maximum = max,
-                DecimalPlaces = key == "ThresholdK" || key == "MinThreshold" ? 1 : 0,
-                Increment = key == "ThresholdK" || key == "MinThreshold" ? 0.5m : 1m,
+                DecimalPlaces = key == "ThresholdK" || key == "MaxBaselineRise" ? 1 : 0,
+                Increment = key == "ThresholdK" || key == "MaxBaselineRise" ? 0.5m : 1m,
                 Value = value
             };
             numeric.ValueChanged += CloudMaskParameter_ValueChanged;
@@ -1236,8 +1264,8 @@ namespace AFPv2
             string key = n.Name.Replace("numericCloudMask", string.Empty);
             double value = (double)n.Value;
             if (key == "OpeningSizePx") cfg.OpeningSizePx = (int)value;
-            else if (key == "ThresholdK") cfg.ThresholdK = value;
-            else if (key == "MinThreshold") cfg.MinThreshold = value;
+            else if (key == "ThresholdK") cfg.ClearLevelPercentile = value;
+            else if (key == "MaxBaselineRise") cfg.MaxBaselineRise = value;
             else if (key == "ClosingSizePx") cfg.ClosingSizePx = (int)value;
             else if (key == "MarginPx") cfg.MarginPx = (int)value;
             else if (key == "MinCloudAreaPx") cfg.MinCloudAreaPx = (int)value;
@@ -1252,7 +1280,8 @@ namespace AFPv2
 
         private void numericUpDownDetThreshK_ValueChanged(object sender, EventArgs e)
         {
-            try { if (videoDetector != null) videoDetector.ThresholdK = (double)numericUpDownDetThreshK.Value; } catch { }
+            try { if (videoDetector != null) videoDetector.ThresholdK = (double)numericUpDownDetThreshK.Value;
+                if (framedetector != null) framedetector.ThresholdK = (double)numericUpDownDetThreshK.Value;  } catch { }
         }
 
         private void numericUpDownDetMinTh_ValueChanged(object sender, EventArgs e)
@@ -1603,8 +1632,13 @@ namespace AFPv2
 
                     try
                     {
-                        Cv2.Add(imgtmp[2], imgtmp2 / 4, imgtmp[2]);//赤チャンネルにマスクを描画 '// imgtmp: Mat[]、imgtmp2: Mat を前提
+                        var redDst = imgtmp[2].Clone();
+                        Cv2.Add(redDst, imgtmp2 / 4, redDst);
+                        imgtmp[2].Dispose();
+                        imgtmp[2] = redDst;
+                        //Cv2.Add(imgtmp[2], imgtmp2 / 4, imgtmp[2]);//赤チャンネルにマスクを描画 '// imgtmp: Mat[]、imgtmp2: Mat を前提
                         Cv2.Merge(imgtmp, img_dmk3);
+                        redDst.Dispose();
                     }
                     catch (Exception ex)
                     {
@@ -2369,8 +2403,30 @@ namespace AFPv2
 
         }
 
-        private void button_test_Click(object sender, EventArgs e)
+        private async void button_test_Click(object sender, EventArgs e)
         {
+            using (var ofd = new OpenFileDialog { Filter = "AVI files|*.avi|All files|*.*" })
+            {
+                if (ofd.ShowDialog() != DialogResult.OK) return;
+                string path = ofd.FileName;
+                string outPath = Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + "_lighten.png");
+                await Task.Run(() => VideoLightenComposite.CreateAndSave(path, outPath));
+            }
+            return;
+
+            string videoSource1 = @"D:\img_data\data\20260630_235211_566_1.avi";
+            // 簡易版: 比較明PNGと、差分画像(xxx_diff.png)を保存
+            VideoLightenComposite.CreateAndSave( videoSource1, @"D:\img_data\data\meteor_001_lighten.png"); return;
+
+            // 画像として受け取る場合
+            using (var r = VideoLightenComposite.Create(videoSource1,// @"D:\obs\meteor_001.avi",
+                       new LightenOptions { Grayscale = false, MakeDifferenceImage = true }))
+            {
+                Cv2.ImShow("lighten", r.Lighten);      // 比較明
+                Cv2.ImShow("diff", r.Difference);      // 比較明 − 平均
+            }
+            return;
+
             string fn_t = @"D:\img_data\data\20260211_1s_1.png";
             Mat mat1 = Cv2.ImRead(fn_t, ImreadModes.Grayscale);
             Cv2.ImShow("mat1:", mat1);
@@ -2406,10 +2462,10 @@ namespace AFPv2
                 OpeningSizePx = 15,
 
                 /// <summary>雲候補抽出の動的しきい値 = (オープニング後画像の)平均 + ThresholdK * 標準偏差</summary>
-                ThresholdK = 3.0,
+                //ThresholdK = 3.0,
 
                 /// <summary>動的しきい値の下限（8bit階調換算の輝度）</summary>
-                MinThreshold = 10.0,
+                //MinThreshold = 10.0,
 
                 /// <summary>断片化した雲領域を連結するクロージング(膨張→収縮)のカーネルサイズ [px]。
                 /// 0にするとクロージングを行わない。</summary>
@@ -2805,6 +2861,11 @@ namespace AFPv2
         }
 
         private void labelDetMinTh_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBoxShowMaskOverlay_CheckedChanged(object sender, EventArgs e)
         {
 
         }

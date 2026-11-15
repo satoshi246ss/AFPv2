@@ -191,6 +191,7 @@
     <Compile Include="Udp.cs" />
     <Compile Include="Udp_kv.cs" />
     <Compile Include="UsageExample.cs" />
+    <Compile Include="VideoLightenComposite.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
       <SubType>Designer</SubType>

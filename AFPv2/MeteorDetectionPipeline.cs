@@ -5,6 +5,8 @@
 using System;
 using OpenCvSharp;
 using AllSkyCamera;
+using AFPv2;
+using System.Collections.Generic;
 
 namespace MeteorDetection
 {
@@ -55,12 +57,26 @@ namespace MeteorDetection
             _lastFrame = frameGray8u;
             var detections = Detector.Process(frameGray8u, img_mask8u_s);
             if (detections.Count > 0)
-            {
+            {              
                 Console.WriteLine($"[{timestampUtc:HH:mm:ss.fff}] {detections.Count} detections");
             }
             Tracker.Step(detections, timestampUtc);
             _frameIndex++;
         }
+        public List<MeteorDetection.Detection> ProcessFrameR(Mat frameGray8u, Mat img_mask8u_s, DateTime timestampUtc)
+        {
+            _lastFrame = frameGray8u;
+            var detections = Detector.Process(frameGray8u, img_mask8u_s);
+            if (detections.Count > 0)
+            {
+                //Form1.fifo.set_detections(detections, frame_id);
+                Console.WriteLine($"[{timestampUtc:HH:mm:ss.fff}] {detections.Count} detections");
+            }
+            Tracker.Step(detections, timestampUtc);
+            _frameIndex++;
+            return detections;
+        }
+
 
         private int _frameIndex;
 

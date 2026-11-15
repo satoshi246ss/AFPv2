@@ -672,15 +672,7 @@ namespace AFPv2
         {
             int result = 0;
             try
-            {
-                //
-                // Wait for images
-                //
-                // *** NOTES ***
-                // In order to passively capture images using image events and
-                // automatic polling, the main thread sleeps in increments of
-                // 20 ms until 10 images have been acquired and saved.
-                //
+            { 
                 const int sleepDuration = 1;
                 while (imageEventListener.imageCnt < ImageEventListener.NumImages && pgc_cam_stop_flag == 0)
                 {
@@ -691,14 +683,15 @@ namespace AFPv2
                     if (imgdata_static_flag > 0) //画像が準備できるとinc
                     {
                         ++frame_fifo_id;
-                        detect();
 
                         sw.Reset(); sw.Start();
-                        imgdata_static_push_FIFO();
+                        imgdata_static_push_FIFO();// image dataをFIFOへ　running averageも計算　 : 1.5ms程度
                         Interlocked.Exchange(ref imgdata_static_flag, 0);
                         sw.Stop();
                         long microseconds = sw.ElapsedTicks / (System.Diagnostics.Stopwatch.Frequency / (1000L * 1000L));
                         //Console.WriteLine("imgdata_static_push_FIFO() : " + pgr_frame_id.ToString() + ": (" + sw.ElapsedMilliseconds.ToString() + ")ms " + microseconds);
+
+                        detect();
 
                         // update パラメータ
                         if (pgr_frame_id % 32 == 0) // about 1sec

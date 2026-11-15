@@ -12,14 +12,294 @@ namespace AFPv2
 {
     partial class Form1
     {
+        MeteorDetection.MeteorFrameDetector framedetector;
+        TrackManager tracker;
+        DetectionRecorder recorder;
+        MeteorDetectionPipeline pipeline;
+        private long totalDetections = 0;
+
+        // 動画を開いてフレームごとにパイプラインへ送り、1/2サイズで表示し検出矩形/中心を描画する
+        private void ProcessFrameWithPipelineInit(string path= @"D:\img_data\data")
+        {
+            framedetector = new MeteorFrameDetector
+            {
+                BinFactor = 2,      // 2608x2608 -> 1304x1304 で検出処理（CPU負荷を約1/4に）
+                ThresholdK = 20.0,
+                MinAreaPx = 2,
+                MaxAreaPx = 600,
+                DilateSize = 3
+            };
+
+            var trackerCfg = new TrackManagerConfig
+            {
+                GateRadiusPx = 30,
+                //MinHitsToConfirm = 4,
+                MaxMissesTentative = 2,
+                MaxMissesConfirmed = 6,
+                MinSpeedPxPerSec = 30,
+                MaxSpeedPxPerSec = 1000
+            };
+
+            var reference = CloudMaskReference.FromFile(@"D:\img_data\data\ref\clear_sky_mean.png"); // 晴天の積算平均フレーム
+
+            var cloudeCfg = new CloudMaskConfig
+            {
+                OpeningSizePx = 0,
+                ClosingSizePx = 25,
+                //ThresholdK = 2.0,
+                //MinThreshold = 30,
+                MarginPx = 15,
+                MinCloudAreaPx = 50,
+                //Reference = reference,   // これを設定すると有効。nullなら従来どおり
+                UseFovCircle = true
+            };           
+
+            // 雲・月マスクを有効化する。
+            // null の場合は MeteorFrameDetector 側で雲マスク処理が無効になるため、
+            // 動画検出時は既定値の CloudMaskConfig を明示的に設定する。
+            if (framedetector.CloudMaskConfig == null)
+            {
+                framedetector.CloudMaskConfig = new MeteorDetection.CloudMaskConfig();
+            }
+            framedetector.CloudMaskUpdateIntervalFrames = Math.Max(1, framedetector.CloudMaskUpdateIntervalFrames);
+
+            tracker = new TrackManager(trackerCfg);
+
+            recorder = null;
+            try
+            {
+                string tmpDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "detecttmp");
+                System.IO.Directory.CreateDirectory(tmpDir);
+                recorder = new DetectionRecorder(tmpDir);
+                recorder.StartSession(path);
+            }
+            catch { recorder = null; }
+
+            pipeline = new MeteorDetectionPipeline(framedetector, tracker, recorder, null, this.fish2);
+
+            MakeSmallMask(img_mask, img_mask8u_s, framedetector);
+            //Cv2.ImShow("test mask", img_mask); Cv2.WaitKey();
+            //Cv2.ImShow("test small mask", img_mask8u_s); Cv2.WaitKey();
+        }
+        // <summary>
+        // フル解像度のマスクを縮小して検出に適用（detector.BinFactor に合わせる）
+        // in:img_mask
+        // </summary>
+        public void MakeSmallMask(Mat maskFull, Mat maskSmall ,MeteorDetection.MeteorFrameDetector detector)
+        {
+
+            // マスクを縮小して検出に適用（detector.BinFactor に合わせる）
+            //Mat maskSmall = null;
+            int bf = Math.Max(1, detector.BinFactor);
+            var smallSize = new OpenCvSharp.Size(Math.Max(1, maskFull.Width / bf), Math.Max(1, maskFull.Height / bf));
+            if (maskFull != null)
+            {
+                //maskSmall = new Mat();
+                Cv2.Resize(maskFull, maskSmall, smallSize, 0, 0, InterpolationFlags.Nearest);
+                if (maskSmall.Type() != MatType.CV_8U)
+                {
+                    var tmp = new Mat();
+                    Cv2.CvtColor(maskSmall, tmp, ColorConversionCodes.BGR2GRAY);
+                    maskSmall.Dispose();
+                    maskSmall = tmp;
+                }
+            }
+
+        }
+
+        // / <summary>
+        // フレームをパイプラインで処理する
+        // </summary>
+        // <param name="frame">入力フレーム CV_8U</param>
+        // <param name="pipeline">メテオ検出パイプライン</param>
+        // <param name="detector">メテオフレーム検出器</param>
+        public void ProcessFrameWithPipeline(Mat frame, Mat maskSmall)//, MeteorDetectionPipeline pipeline, MeteorDetection.MeteorFrameDetector detector)
+        {
+            if (pipeline == null || framedetector == null)
+            {
+                Console.WriteLine("Pipeline or detector is not initialized.");
+                //MessageBox.Show("Pipeline or detector is not initialized.");
+                return;
+            }
+
+            // パイプライン処理（内部で Detector->Tracker->Recorder/UDP を行う）
+            DateTime frameTimestamp = DateTime.UtcNow;
+            var detections = pipeline.ProcessFrameR(frame, maskSmall, frameTimestamp);
+            int currentDetections = detections?.Count ?? 0;
+            totalDetections += currentDetections;
+            fifo.set_detections(detections, frame_id);
+            if (currentDetections > 0)
+            {
+                Console.WriteLine("detections:{0:D3} total:{1:D6}", currentDetections, totalDetections);
+            }
+
+            var tracks = pipeline.Tracker.ActiveTracks;
+            fifo.set_tracks(tracks, frame_id);
+
+            if (frame_id % 30 != 0)
+            {
+                return;
+            }
+            //return;
+
+            // 同じ検出を取得して表示用に使う（NG オフライン処理なので重複しても可）
+            //var detections = detector.Process(frame, maskSmall);
+
+            // 表示用に1/2サイズへ縮小
+            int w2 = Math.Max(1, frame.Width / 2);
+            int h2 = Math.Max(1, frame.Height / 2);
+            using (var disp = new Mat(h2,w2,MatType.CV_8UC3))
+            using( var framehalf = new Mat())
+            {
+                Cv2.Resize(frame, framehalf, new OpenCvSharp.Size(w2, h2), 0, 0, InterpolationFlags.Area);
+                Cv2.CvtColor(framehalf, disp, ColorConversionCodes.GRAY2BGR);
+
+                // 統合マスクの除外領域（固定・星・雲）を半透明の薄赤色で重ねる。
+                if (showMaskOverlay)
+                {
+                    using (var validMask = framedetector.GetCombinedValidMask())
+                    using (var maskFull = new Mat())
+                    using (var maskDisplay = new Mat())
+                    using (var redOverlay = new Mat(disp.Size(), disp.Type(), new Scalar(0, 0, 255)))
+                    {
+                        if (validMask != null)
+                        {
+                            Cv2.BitwiseNot(validMask, maskFull);
+                            Cv2.Resize(maskFull, maskDisplay, disp.Size(), 0, 0, InterpolationFlags.Nearest);
+                            using (var tinted = new Mat())
+                            {
+                                Cv2.BitwiseAnd(redOverlay, redOverlay, tinted, maskDisplay);
+                                Cv2.AddWeighted(disp, 0.72, tinted, 0.28, 0, disp);
+                            }
+                        }
+                    }
+                }
+
+                // 検出結果をオーバーレイ描画（座標は1/2にスケール）
+                foreach (var d in detections)
+                {
+                    var cx = (int)(d.Center.X * 0.5);
+                    var cy = (int)(d.Center.Y * 0.5);
+                    var rx = (int)(d.BBox.X * 0.5);
+                    var ry = (int)(d.BBox.Y * 0.5);
+                    var rw = Math.Max(1, (int)(d.BBox.Width * 0.5));
+                    var rh = Math.Max(1, (int)(d.BBox.Height * 0.5));
+
+                    //Cv2.Rectangle(disp, new OpenCvSharp.Rect(rx, ry, rw, rh), new Scalar(0, 255, 0), 2);
+                    // 中心点は塗りつぶしなしの赤い円（輪郭のみ）
+                    Cv2.Circle(disp, new OpenCvSharp.Point(cx, cy), 5, new Scalar(0, 0, 255), 1);
+                    Cv2.PutText(disp, d.PeakValue.ToString("F0"), new OpenCvSharp.Point(cx + 6, cy - 6), HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 0), 1);
+                }
+
+                // トラッカー結果を描画（履歴ポリライン、推定位置円、ID、速度矢印）
+                try
+                {
+                    //var tracks = pipeline.Tracker.ActiveTracks;
+                    if (tracks != null)
+                    {
+                        foreach (var tr in tracks)
+                        {
+                            // 推定位置と速度を取得
+                            var pos = tr.Position;
+                            var vel = tr.VelocityPxPerSec;
+                            var vel_xy = Math.Sqrt(vel.X * vel.X + vel.Y*vel.Y);
+
+                            // スケール（表示は1/2サイズ）
+                            int tx = (int)(pos.X * 0.5);
+                            int ty = (int)(pos.Y * 0.5);
+
+                            // 履歴を線で描画
+                            if (tr.History != null && tr.History.Count >= 2)
+                            {
+                                var pts = new System.Collections.Generic.List<OpenCvSharp.Point>();
+                                foreach (var h in tr.History)
+                                {
+                                    // History の要素は (DateTime T, OpenCvSharp.Point2f Pos) の値タプルなので null チェック不要
+                                    if (((h.Pos.X - pos.X) * (h.Pos.X - pos.X) + (h.Pos.Y - pos.Y) * (h.Pos.Y - pos.Y)) > 16) // 近傍の履歴点は描画しない（重なって見えないため）
+                                    {
+                                        pts.Add(new OpenCvSharp.Point((int)(h.Pos.X * 0.5), (int)(h.Pos.Y * 0.5)));
+                                    }
+                                }
+                                if (pts.Count >= 2) Cv2.Polylines(disp, new[] { pts.ToArray() }, false, new Scalar(255, 200, 0), 2);
+                            }
+
+                            // 推定位置の円（確定済みは緑、暫定は青）
+                            var col = (tr.Confirmed) ? new Scalar(0, 255, 0) : new Scalar(255, 0, 0);
+                            Cv2.Circle(disp, new OpenCvSharp.Point(tx, ty), 7, col, 1);
+
+                            // ID を表示
+                            Cv2.PutText(disp, $"ID:{tr.Id}(v:{vel_xy:F1})", new OpenCvSharp.Point(tx + 6, ty + 6), HersheyFonts.HersheySimplex, 0.5, col, 1);
+
+                            // 速度ベクトルを描画（短い矢印）
+                            double vx = vel.X * 0.5 * 0.1; // 画面スケールと表示縮尺の調整
+                            double vy = vel.Y * 0.5 * 0.1;
+                            int offset = 10; // 矢印の始点を円の中心から少しずらす
+                            var endp = new OpenCvSharp.Point((int)(tx + vx), (int)(ty + vy)+offset);
+                            Cv2.ArrowedLine(disp, new OpenCvSharp.Point(tx, ty+offset), endp, col, 1);
+                        }
+                    }
+                }
+                catch { }
+
+                // 画面内にフレーム番号と検出数を表示
+                string txtFrame = $"Frame: {frame_id}";
+                string txtDet = $"Detections: {detections?.Count ?? 0} / Total: {totalDetections}";
+                int confirmedTrackCount = 0;
+                try
+                {
+                    confirmedTrackCount = pipeline.Tracker.TotalTrackConfirmedCount;
+                }
+                catch { }
+                string txtConfirmed = $"Confirmed tracks: {confirmedTrackCount}";
+                var pt1 = new OpenCvSharp.Point(10, 24);
+                var pt2 = new OpenCvSharp.Point(10, 52);
+                var ptConfirmed = new OpenCvSharp.Point(10, 80);
+                // 検出パラメータ表示
+                string txtParams = $"Bin:{framedetector.BinFactor} K:{framedetector.ThresholdK:F2} MinTh:{framedetector.MinThreshold:F0} MinA:{framedetector.MinAreaPx} Dil:{framedetector.DilateSize}";
+                var pt3 = new OpenCvSharp.Point(10, 108);
+
+                var cloudInfo = framedetector.LastCloudMaskInfo;
+                string txtCloud = (cloudInfo != null)
+                    ? $"Cloud: cov={cloudInfo.CoverageRatio:F3} clear={cloudInfo.GlobalClearLevel:F1} sig={cloudInfo.NoiseSigma:F1} off={cloudInfo.Offset:F1} blk={cloudInfo.UsedBlocks}/{cloudInfo.TotalBlocks}"
+                    : "Cloud: n/a";
+                var ptCloud = new OpenCvSharp.Point(10, 136);
+
+                // 黒で下書き（アウトライン）
+                Cv2.PutText(disp, txtFrame, pt1, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
+                Cv2.PutText(disp, txtDet, pt2, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
+                Cv2.PutText(disp, txtConfirmed, ptConfirmed, HersheyFonts.HersheySimplex, 0.8, new Scalar(0, 0, 0), 3);
+                Cv2.PutText(disp, txtParams, pt3, HersheyFonts.HersheySimplex, 0.6, new Scalar(0, 0, 0), 3);
+                Cv2.PutText(disp, txtCloud, ptCloud, HersheyFonts.HersheySimplex, 0.5, new Scalar(0, 0, 0), 3);
+                // 白で前景文字
+                Cv2.PutText(disp, txtFrame, pt1, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
+                Cv2.PutText(disp, txtDet, pt2, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
+                Cv2.PutText(disp, txtConfirmed, ptConfirmed, HersheyFonts.HersheySimplex, 0.8, new Scalar(255, 255, 255), 1);
+                Cv2.PutText(disp, txtParams, pt3, HersheyFonts.HersheySimplex, 0.6, new Scalar(255, 255, 255), 1);
+                Cv2.PutText(disp, txtCloud, ptCloud, HersheyFonts.HersheySimplex, 0.5, new Scalar(255, 255, 255), 1);
+
+                Cv2.ImShow("MeteorDetection - Video", disp);
+                Cv2.WaitKey(1);
+            }
+            // maskSmall を解放
+            //try { maskSmall?.Dispose(); } catch { }
+
+
+            //int key = Cv2.WaitKey(1);
+            //if (key == 27) break; // ESC で中止
+            //videoFrameIndex++;
+        }
+        
+
         /// <summary>
         /// 最大値サーチ
         /// </summary>
         public void detect()
-        {            
+        {
             //UsageExample.Grab(imgdata.img, UsageExample.queue, UsageExample.cts.Token);
             //UsageExample.Process(UsageExample.pipeline, UsageExample.queue, img_mask8u_s, UsageExample.cts.Token);
-            UsageExample.pipeline.ProcessFrame(imgdata.img, img_mask8u_s, DateTime.UtcNow);
+            //UsageExample.pipeline.ProcessFrame(imgdata.img, img_mask8u_s, DateTime.UtcNow);
+
+            ProcessFrameWithPipeline(imgdata_static.img, img_mask8u_s);
 
             return;
 
@@ -108,9 +388,9 @@ namespace AFPv2
                 foreach (var keyPoint in keypoints1)
                 {
                     if (maxkey.Size < keyPoint.Size) maxkey = keyPoint;
-                    Console.WriteLine("X: {0}, Y: {1}", keyPoint.Pt.X, keyPoint.Pt.Y);
+                    Console.WriteLine("X: {0}, Y: {1}", keyPoint.Pt.Y, keyPoint.Pt.Y);
                 }
-                Console.WriteLine("MAX X: {0}, Y: {1} Size: {2}", maxkey.Pt.X, maxkey.Pt.Y, maxkey.Size);
+                Console.WriteLine("MAX X: {0}, Y: {1} Size: {2}", maxkey.Pt.Y, maxkey.Pt.Y, maxkey.Size);
                 maxKeyPoint = maxkey;
                 //blobs.Label(img2); //3ms
             }//8ms

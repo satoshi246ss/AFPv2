@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using System.IO;
 using OpenCvSharp;
 using OpenCvSharp.Blob;
+using System.Collections.Generic;
+using MeteorDetection;
 
 namespace AFPv2
 {
@@ -53,22 +55,24 @@ namespace AFPv2
         public double az, alt, vaz, valt;
         public Udp_kv udpkv1;
         public long timestamp; // 2021 5 2 added.
+        public List<MeteorDetection.Detection> detections; // 2026 10 26 added.
+        public IReadOnlyList<MeteorTrack> tracks; // 2026 10 26 added.
 
         // デフォルトコンストラクタ structはだめ
- /*       public ImageData() // structはだめ
-        {
-            id = 0;
-            detect_mode = 0;
-            t = DateTime.Now;
-            img = null;// new mat(h,w, MatType.CV_8U, 1);
-            ImgSaveFlag = false;
-            gx = gy = vmax = 0.0;
-            kgx = kgy = kvx = kvy = 0.0;
-            az = alt = vaz = valt = 0.0;
-            blobs = new CvBlobs();
-            udpkv1 = new Udp_kv();
-        }
-        */
+        /*       public ImageData() // structはだめ
+               {
+                   id = 0;
+                   detect_mode = 0;
+                   t = DateTime.Now;
+                   img = null;// new mat(h,w, MatType.CV_8U, 1);
+                   ImgSaveFlag = false;
+                   gx = gy = vmax = 0.0;
+                   kgx = kgy = kvx = kvy = 0.0;
+                   az = alt = vaz = valt = 0.0;
+                   blobs = new CvBlobs();
+                   udpkv1 = new Udp_kv();
+               }
+               */
         // デフォルトコンストラクタ
         public ImageData(Int32 w, Int32 h)
         {
@@ -84,6 +88,8 @@ namespace AFPv2
             blobs = new CvBlobs();
             udpkv1 = new Udp_kv();
             timestamp = 0;
+            detections = new List<MeteorDetection.Detection>();
+            tracks = new List<MeteorDetection.MeteorTrack>();
         }
         public void init(Int32 wi, Int32 he)
         {
@@ -521,7 +527,27 @@ namespace AFPv2
                 this.data[ii].ImgSaveFlag = true;
             }
         }
+        /// <summary>
+        /// 各フレームの検出結果を設定する。
+        /// </summary>
+        public void set_detections(List<MeteorDetection.Detection> detection, int frame_id = -1)
+        {
+            if (frame_id == -1 || frame_id == this.data[(this.bottom) & this.mask].id)
+            {
+                data[(this.bottom) & this.mask].detections = new List<MeteorDetection.Detection>(detection); // deep copy
+            }
+        }
 
+        /// <summary>
+        /// 各フレームの検出結果を設定する。
+        /// </summary>
+        public void set_tracks(IReadOnlyList<MeteorTrack> tracks, int frame_id = -1)
+        {
+            if (frame_id == -1 || frame_id == this.data[(this.bottom) & this.mask].id)
+            {
+                data[(this.bottom) & this.mask].tracks = new List<MeteorTrack>(tracks); // deep copy
+            }
+        }
 
         #endregion
         #region IEnumerable<T> メンバ
@@ -662,7 +688,7 @@ namespace AFPv2
 
             vw.Write(imgR);
             //writer.WriteLine("{0} {1} {2}  ", vd.id, vd.kgx, vd.kgy);
-            int id = System.Threading.Thread.CurrentThread.ManagedThreadId; Console.WriteLine("RingBuf ThreadID : " + id);
+            //int id = System.Threading.Thread.CurrentThread.ManagedThreadId; Console.WriteLine("RingBuf ThreadID : " + id);
             appendText += DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss ID:") + vd.id.ToString() +" "+ this.data[this.bottom].timestamp.ToString() + Environment.NewLine;
         }
 

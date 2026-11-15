@@ -41,7 +41,7 @@ namespace MeteorDetection
             var trackerCfg = new TrackManagerConfig
             {
                 GateRadiusPx = 60,
-                MinHitsToConfirm = 3,
+                //MinHitsToConfirm = 3,
                 MaxMissesTentative = 2,
                 MaxMissesConfirmed = 4,
                 MinSpeedPxPerSec = 20,
@@ -52,8 +52,8 @@ namespace MeteorDetection
             {
                 OpeningSizePx = 15,
                 ClosingSizePx = 25,
-                ThresholdK = 3,
-                MinThreshold = 10,
+                //ThresholdK = 3,
+                //MinThreshold = 10,
                 MarginPx = 15,
                 MinCloudAreaPx = 50,
             };
@@ -120,7 +120,7 @@ namespace MeteorDetection
             var trackerCfg = new TrackManagerConfig
             {
                 GateRadiusPx = 60,
-                MinHitsToConfirm = 3,
+                //MinHitsToConfirm = 3,
                 MaxMissesTentative = 2,
                 MaxMissesConfirmed = 4,
                 MinSpeedPxPerSec = 20,

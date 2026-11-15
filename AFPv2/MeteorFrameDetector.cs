@@ -2,6 +2,7 @@
 // 依存: OpenCvSharp4 (4.5.2.20210404)
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using OpenCvSharp;
 
 namespace MeteorDetection
@@ -30,7 +31,7 @@ namespace MeteorDetection
         }
 
         /// <returns>更新後の背景 (CV_32F)</returns>
-        public Mat Update(Mat frame8u, Mat mask8u)
+        public Mat Update(Mat frame8u)//, Mat mask8u)
         {
             if (_bgF32 == null || _bgF32.Size() != frame8u.Size())
             {
@@ -40,7 +41,7 @@ namespace MeteorDetection
             }
             else
             {
-                Cv2.AccumulateWeighted(frame8u, _bgF32, _alpha, mask8u);
+                Cv2.AccumulateWeighted(frame8u, _bgF32, _alpha, null);// mask8u);
             }
             return _bgF32;
         }
@@ -68,6 +69,9 @@ namespace MeteorDetection
 
         /// <summary>最大面積（縮小後座標系, px^2）。雲・鳥・大型光源の除外用</summary>
         public int MaxAreaPx { get; set; } = 600;
+
+        /// <summary>1フレームあたりの最大検出数。超過時は PeakValue の高い順に残す。</summary>
+        public int MaxDetections { get; set; } = 16;
 
         /// <summary>膨張カーネルサイズ（縮小後座標系, px）。0で膨張なし</summary>
         public int DilateSize { get; set; } = 3;
@@ -102,6 +106,9 @@ namespace MeteorDetection
         /// <summary>直近に生成した雲マスクでの雲・月の画面占有率（0〜1、参考情報）。</summary>
         public double LastCloudCoverageRatio { get; private set; }
 
+        /// <summary>直近に生成した雲マスクの診断情報。表示やログ出力に利用する。</summary>
+        public CloudMaskInfo LastCloudMaskInfo { get; private set; }
+
         private RunningAverageBackground _bg;
         private Mat _small, _bgSmall32, _bgSmall8, _diff, _mask, _kernel, _starValidMask, _cloudValidMask, _combinedValidMask;
         private int _kernelSize = -1;
@@ -129,10 +136,11 @@ namespace MeteorDetection
                 Cv2.Resize(frameGray8u, _small, size, 0, 0, InterpolationFlags.Area);
             else
                 frameGray8u.CopyTo(_small);
-
+            //Cv2.ImShow("small", _small);
+            //Cv2.ImShow("mask8u_s", mask8u_s);
             Cv2.BitwiseAnd(mask8u_s, _small, _small); // 処理対象領域以外を0にする
 
-            var bg32 = _bg.Update(_small, mask8u_s);
+            var bg32 = _bg.Update(_small);
 
             if (_bgSmall8 == null || _bgSmall8.Size() != size)
             {
@@ -158,6 +166,8 @@ namespace MeteorDetection
                 _mask = new Mat();
             }
             Cv2.Threshold(_diff, _mask, thresh, 255, ThresholdTypes.Binary);
+            //Cv2.BitwiseAnd(_mask, mask8u_s, _mask);
+            //Cv2.ImShow("diff thre", _mask);
 
             if (DilateSize > 0)
             {
@@ -191,7 +201,9 @@ namespace MeteorDetection
                 {
                     _cloudValidMask?.Dispose();
                     _cloudValidMask = CloudMaskGenerator.GenerateValidMask(_bgSmall8, CloudMaskConfig,
-                        ratio => LastCloudCoverageRatio = ratio);
+                        ratio => LastCloudCoverageRatio = ratio,
+                        info => LastCloudMaskInfo = info);
+                    //Cv2.ImShow("_bgsmall8", _bgSmall8);
                 }
                 Cv2.BitwiseAnd(_mask, _cloudValidMask, _mask);
             }
@@ -243,6 +255,9 @@ namespace MeteorDetection
                     });
                 }
             }
+
+            if (MaxDetections > 0 && results.Count > MaxDetections)
+                results = results.OrderByDescending(d => d.PeakValue).Take(MaxDetections).ToList();
 
             return results;
         }

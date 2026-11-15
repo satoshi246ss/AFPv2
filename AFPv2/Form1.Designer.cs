@@ -794,12 +794,15 @@
             // checkBoxShowMaskOverlay
             // 
             this.checkBoxShowMaskOverlay.AutoSize = true;
+            this.checkBoxShowMaskOverlay.Checked = true;
+            this.checkBoxShowMaskOverlay.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBoxShowMaskOverlay.Location = new System.Drawing.Point(264, 862);
             this.checkBoxShowMaskOverlay.Name = "checkBoxShowMaskOverlay";
             this.checkBoxShowMaskOverlay.Size = new System.Drawing.Size(196, 22);
             this.checkBoxShowMaskOverlay.TabIndex = 221;
             this.checkBoxShowMaskOverlay.Text = "マスク除外領域を表示";
             this.checkBoxShowMaskOverlay.UseVisualStyleBackColor = true;
+            this.checkBoxShowMaskOverlay.CheckedChanged += new System.EventHandler(this.checkBoxShowMaskOverlay_CheckedChanged);
             // 
             // checkBoxUseStarMask
             // 
@@ -808,7 +811,7 @@
             this.checkBoxUseStarMask.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBoxUseStarMask.Location = new System.Drawing.Point(264, 832);
             this.checkBoxUseStarMask.Name = "checkBoxUseStarMask";
-            this.checkBoxUseStarMask.Size = new System.Drawing.Size(170, 22);
+            this.checkBoxUseStarMask.Size = new System.Drawing.Size(142, 22);
             this.checkBoxUseStarMask.TabIndex = 222;
             this.checkBoxUseStarMask.Text = "星マスクを適用";
             this.checkBoxUseStarMask.UseVisualStyleBackColor = true;
